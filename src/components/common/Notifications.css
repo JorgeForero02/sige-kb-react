@@ -1,0 +1,125 @@
+﻿.notifications-container {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 400px;
+}
+
+.notification {
+  background: white;
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border-left: 5px solid;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  animation: slideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(400px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.notification-content {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex: 1;
+}
+
+.notif-icon {
+  font-weight: 700;
+  font-size: 1.2rem;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.notif-message {
+  font-weight: 500;
+  color: #2c1b47;
+  font-size: 0.95rem;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  color: #9CA3AF;
+  cursor: pointer;
+  font-size: 1.5rem;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.notification-close:hover {
+  color: #6B7280;
+}
+
+/* Estilos por tipo */
+.notification-success {
+  border-left-color: #10B981;
+}
+
+.notification-success .notif-icon {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.notification-danger {
+  border-left-color: #EF4444;
+}
+
+.notification-danger .notif-icon {
+  background: #FEE2E2;
+  color: #7F1D1D;
+}
+
+.notification-warning {
+  border-left-color: #F59E0B;
+}
+
+.notification-warning .notif-icon {
+  background: #FEF3C7;
+  color: #92400E;
+}
+
+.notification-info {
+  border-left-color: #3B82F6;
+}
+
+.notification-info .notif-icon {
+  background: #EFF6FF;
+  color: #1E40AF;
+}
+
+@media (max-width: 600px) {
+  .notifications-container {
+    right: 1rem;
+    left: 1rem;
+    max-width: none;
+  }
+
+  .notification {
+    padding: 1rem;
+  }
+
+  .notif-message {
+    font-size: 0.9rem;
+  }
+}

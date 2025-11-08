@@ -1,0 +1,27 @@
+﻿.main-content {
+  margin-left: 280px;
+  padding: 2rem;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f3ff 0%, #fce7f3 100%);
+}
+
+.main-content h1 {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: #1e1b4b;
+  margin-bottom: 2rem;
+  background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    padding: 5rem 1rem 1rem;
+  }
+
+  .main-content h1 {
+    font-size: 1.8rem;
+  }
+}
