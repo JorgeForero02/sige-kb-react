@@ -1,11 +1,11 @@
 ﻿.hamburger {
   position: fixed;
-  top: 1rem;
-  left: 1rem;
+  top: 2rem;
+  right: 1rem;
   z-index: 1001;
-  width: 50px;
-  height: 50px;
-  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  width: 35px;
+  height: 30px;
+  background:#f74780;
   border: none;
   border-radius: 12px;
   color: white;
@@ -14,7 +14,30 @@
   display: none;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+}
+
+.hamburger-outside {
+  position: fixed;
+  top: 4rem;
+  left: 1rem;
+  z-index: 1001;
+  display: none;
+}
+
+.hamburger-inside {
+  display: none;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 500px) {
+  .hamburger-outside,
+  .hamburger-inside {
+    display: flex;
+  }
+  
+  .sidebar .hamburger-inside {
+    display: flex;
+  }
 }
 
 .sidebar {
@@ -23,7 +46,7 @@
   top: 0;
   width: 280px;
   height: 100vh;
-  background: linear-gradient(180deg, #1e1b4b 0%, #312e81 100%);
+  background: #f74780;
   display: flex;
   flex-direction: column;
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
@@ -35,14 +58,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1rem;
+  top:10px;
 }
 
 .sidebar-header h2 {
   margin: 0;
   color: white;
-  font-size: 1.5rem;
+  font-size: 15px;
   font-weight: 900;
 }
 
@@ -59,12 +82,12 @@
 }
 
 .sidebar-user {
-  padding: 1.5rem;
+  padding: 1rem;
   display: flex;
   align-items: center;
   gap: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.2);
+  color: aliceblue;
+  font-size: 20px;
 }
 
 .sidebar-user i {
@@ -85,26 +108,38 @@
   color: white;
   font-size: 0.7rem;
   font-weight: 700;
-  text-transform: uppercase;
   margin-top: 0.25rem;
-}
-
-.role-badge.role-admin {
-  background: linear-gradient(135deg, #dc2626, #991b1b);
-}
-
-.role-badge.role-gerente {
-  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
-}
-
-.role-badge.role-empleado {
-  background: linear-gradient(135deg, #10b981, #059669);
 }
 
 .sidebar-nav {
   flex: 1;
   padding: 1.5rem 1rem;
   overflow-y: auto;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: rgba(219, 37, 37, 0.1) !important;
+  border-radius: 10px !important;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: #f74780 !important;
+  border-radius: 10px !important;
+  transition: all 0.3s ease !important;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: #f74780 !important;
+}
+
+/* Para Firefox */
+.sidebar-nav {
+  scrollbar-width: thin !important;
+  scrollbar-color: #f74780 rgba(100, 46, 83, 0.1) !important;
 }
 
 .sidebar-nav a {
@@ -126,9 +161,8 @@
 }
 
 .sidebar-nav a.active {
-  background: rgba(139, 92, 246, 0.3);
+  background:#FFC1D5;
   color: white;
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
 }
 
 .sidebar-nav a i {
@@ -190,3 +224,181 @@
     z-index: 999;
   }
 }
+
+.sidebar-dropdown {
+  margin-bottom: 0.5rem;
+}
+
+.sidebar-dropdown-toggle {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  text-decoration: none;
+  border-radius: 12px;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.sidebar-dropdown-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  transform: translateX(4px);
+}
+
+.sidebar-dropdown-toggle i:last-child {
+  margin-left: auto;
+  font-size: 0.8rem;
+}
+
+.sidebar-dropdown-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  border-radius: 8px;
+  margin-left: 0.5rem;
+}
+
+.sidebar-dropdown-content.show {
+  max-height: 300px;
+  overflow: auto;
+}
+
+.sidebar-dropdown-content a {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.7rem 1rem 0.7rem 2.5rem;
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  transition: all 0.3s ease;
+  font-size: 0.85rem;
+  border-left: 3px solid transparent;
+  font-weight: 500;
+}
+
+/* Estilos para el icono de usuario en el header */
+.sidebar-user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: white;
+  flex: 1;
+}
+
+.user-icon {
+  font-size: 2.5rem;
+  color: #FFC1D5;
+  flex-shrink: 0;
+}
+
+.user-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.user-name {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: white;
+  line-height: 1.2;
+}
+
+.user-role {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #FFC1D5;
+  letter-spacing: 0.5px;
+}
+
+.sidebar-title-wrapper {
+  display: flex;
+  flex-direction: column;
+  color: white;
+  width: 100%;
+}
+
+/* Ajustes para mantener hover clarito pero quitar fondo activo */
+
+/* Subitems como botones */
+.sidebar-subitem {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.5rem 1rem 0.5rem 2rem; /* Reducir padding vertical */
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.8rem; /* Texto más pequeño */
+  border-left: 3px solid transparent;
+  font-weight: 500;
+  gap: 0.75rem; /* Reducir gap entre icono y texto */
+  border-radius: 8px; /* Bordes menos redondeados */
+  margin-bottom: 0.15rem; /* Menos espacio entre items */
+  min-height: 36px; /* Altura mínima consistente */
+}
+
+.sidebar-subitem:hover {
+  background: rgba(255, 255, 255, 0.1); /* Fondo clarito en hover */
+  color: white;
+  transform: translateX(4px);
+}
+
+.sidebar-subitem.active {
+  background: transparent; /* Quitar fondo cuando está activo */
+  color: white;
+  font-weight: 600;
+  border-left-color: #FFC1D5;
+}
+
+/* Links principales - mantener hover clarito, quitar fondo activo */
+.sidebar-nav > a {
+  border-left: 3px solid transparent; /* Para consistencia con subitems */
+}
+
+.sidebar-nav > a:hover {
+  background: rgba(255, 255, 255, 0.1); /* Fondo clarito en hover */
+  transform: translateX(4px);
+}
+
+.sidebar-nav > a.active {
+  background: transparent; /* Quitar fondo cuando está activo */
+  color: white;
+  border-left-color: #FFC1D5;
+}
+
+/* Dropdown toggle - mantener hover clarito, quitar fondo activo */
+.sidebar-dropdown-toggle:hover {
+  background: rgba(255, 255, 255, 0.1); /* Fondo clarito en hover */
+  transform: translateX(4px);
+}
+
+.sidebar-dropdown-toggle.active {
+  background: transparent; /* Quitar fondo cuando está activo */
+  color: white;
+  border-left: 3px solid #FFC1D5;
+}
+
+/* Asegurar que los iconos en subitems tengan el mismo estilo */
+.sidebar-subitem i {
+  font-size: 1.1rem;
+  width: 20px;
+  text-align: center;
+}
+
+/* Ajustar el espaciado del dropdown content para que los subitems tengan el mismo hover */
+.sidebar-dropdown-content {
+  padding: 0.25rem 0.5rem; /* Espacio interno para que el hover se vea completo */
+}
+

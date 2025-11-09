@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import './Auth.css';
+import logo from '../../assets/logoIcono.png';
 
 export function Login() {
   const [documento, setDocumento] = useState('');
@@ -29,11 +30,13 @@ export function Login() {
   return (
     <div className="login-page">
       <div className="login-container">
+        <div className="karenbeauty">
+          <img src={logo} alt="Karen Beauty Logo" className="login-logo-img" />
+        </div>
+
         <div className="login-card">
           <div className="login-header">
-            <div className="login-logo">B</div>
-            <h1>Belleza & Estilo</h1>
-            <p>Sistema de Gestion</p>
+            <h1>Iniciar Sesión</h1>
           </div>
 
           {error && (
@@ -44,7 +47,7 @@ export function Login() {
 
           <form onSubmit={handleSubmit} className="login-form">
             <div className="form-group">
-              <label>Documento de Identidad</label>
+              <label>Documento de identidad</label>
               <input
                 type="text"
                 value={documento}
@@ -57,7 +60,7 @@ export function Login() {
             </div>
 
             <div className="form-group">
-              <label>Contrasena</label>
+              <label>Contraseña</label>
               <input
                 type="password"
                 value={contrasena}
@@ -72,10 +75,9 @@ export function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="btn btn-primary btn-block"
-              style={{width:'100%'}}
+              className="btn-primary"
             >
-              {loading ? 'Iniciando sesion...' : 'Iniciar Sesion'}
+              {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </button>
           </form>
 

@@ -3,10 +3,11 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%);
+  background: #ffe0ea;
   padding: 1rem;
   position: relative;
   overflow: hidden;
+  font-family: 'Pontano Sans', sans-serif;
 }
 
 .login-page::before {
@@ -72,7 +73,6 @@
 .login-logo {
   width: 90px;
   height: 90px;
-  background: linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -81,19 +81,20 @@
   font-weight: 900;
   color: white;
   margin: 0 auto 1.5rem;
-  box-shadow: 0 15px 35px rgba(139, 92, 246, 0.4);
+  box-shadow: 0 15px 35px rgba(247, 71, 128, 0.4);
 }
 
 .login-header h1 {
   font-size: 2rem;
-  color: #1F2937;
+  color: #f74780;
   margin: 0 0 0.5rem 0;
-  font-weight: 800;
-  letter-spacing: -1px;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: -0.5px;
 }
 
 .login-header p {
-  color: #9CA3AF;
+  color: #6c757d;
   margin: 0;
   font-size: 0.95rem;
   font-weight: 500;
@@ -113,57 +114,62 @@
 }
 
 .form-group label {
-  font-weight: 700;
-  color: #1F2937;
+  font-weight: 600;
+  color: #495057;
   font-size: 0.9rem;
-  text-transform: uppercase;
+  text-transform: none !important;
   letter-spacing: 0.3px;
 }
 
 .form-control {
   padding: 1rem 1.3rem;
-  border: 2px solid #E5E7EB;
+  border: 2px solid #e9ecef;
   border-radius: 10px;
   font-size: 0.95rem;
   transition: all 0.3s ease;
   background: white;
+  color: #495057;
+  font-family: 'Pontano Sans', sans-serif;
 }
 
 .form-control:focus {
   outline: none;
-  border-color: #8B5CF6;
-  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
-  background: #F9F5FF;
+  border-color: #f74780;
+  box-shadow: 0 0 0 4px rgba(247, 71, 128, 0.1);
+  background: #fff5f7;
 }
 
 .form-control::placeholder {
-  color: #D1D5DB;
+  color: #adb5bd;
 }
 
 .form-control:disabled {
-  background: #F3F4F6;
+  background: #f8f9fa;
   cursor: not-allowed;
   opacity: 0.6;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%);
+  background: #f74780 !important;
   color: white;
-  border: none;
+  border: none !important;
   padding: 1rem;
   border-radius: 10px;
-  font-weight: 700;
+  font-weight: 500;
   font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 10px 25px rgba(139, 92, 246, 0.3);
+  box-shadow: 0 10px 25px rgba(247, 71, 128, 0.3);
   letter-spacing: 0.5px;
-  text-transform: uppercase;
+  text-transform: none;
+  font-family: 'Pontano Sans', sans-serif;
+  width: 100%;
 }
 
 .btn-primary:hover:not(:disabled) {
+  background: #f74780 !important;
   transform: translateY(-2px);
-  box-shadow: 0 15px 35px rgba(139, 92, 246, 0.4);
+  box-shadow: 0 15px 35px rgba(247, 71, 128, 0.4);
 }
 
 .btn-primary:active:not(:disabled) {
@@ -171,14 +177,15 @@
 }
 
 .btn-primary:disabled {
-  opacity: 0.7;
+  background: #f74780 !important;
   cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .alert-danger {
-  background: #FEF2F2;
-  color: #991B1B;
-  border: 2px solid #FECACA;
+  background: #f8d7da;
+  color: #721c24;
+  border: 2px solid #f5c6cb;
   padding: 1rem 1.3rem;
   border-radius: 10px;
   margin-bottom: 1.5rem;
@@ -186,6 +193,7 @@
   align-items: center;
   gap: 0.8rem;
   animation: slideDown 0.3s ease-out;
+  font-family: 'Pontano Sans', sans-serif;
 }
 
 @keyframes slideDown {
@@ -202,15 +210,16 @@
 .login-footer {
   text-align: center;
   padding-top: 1.5rem;
-  border-top: 2px solid #E5E7EB;
-  color: #9CA3AF;
+  border-top: 2px solid #e9ecef;
+  color: #6c757d;
   font-size: 0.85rem;
   line-height: 1.6;
+  font-family: 'Pontano Sans', sans-serif;
 }
 
 .login-footer strong {
-  color: #1F2937;
-  font-weight: 700;
+  color: #495057;
+  font-weight: 600;
 }
 
 @media (max-width: 480px) {
@@ -236,3 +245,21 @@
     padding: 0.9rem;
   }
 }
+
+.karenbeauty {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 18px;
+  margin-top: 10px;  
+}
+
+.login-logo-img {
+  width: 350px;        
+  height: auto;
+  object-fit: contain;
+}
+
+
+

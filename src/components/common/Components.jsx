@@ -1,6 +1,6 @@
-﻿import React from 'react';
-import './Components.css';
+﻿import './Components.css';
 
+export {Modal} from './Modal';
 export function Card({ children, className = '' }) {
   return (
     <div className={`card-component ${className}`}>

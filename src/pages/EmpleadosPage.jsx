@@ -8,11 +8,65 @@ import { useAlert } from '../hooks/useAlert';
 import { usePermissions } from '../hooks/usePermissions';
 import '../pages/Pages.css';
 
+function Modal({ show, onClose, children }) {
+  if (!show) return null;
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '12px',
+        padding: '2rem',
+        width: '90%',
+        maxWidth: '700px',
+        maxHeight: '90vh',
+        overflowY: 'auto',
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+        position: 'relative'
+      }}>
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '1rem',
+            right: '1rem',
+            background: 'none',
+            border: 'none',
+            fontSize: '1.5rem',
+            cursor: 'pointer',
+            color: '#666',
+            zIndex: 1001
+          }}
+        >
+          ×
+        </button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function EmpleadosPage() {
   const [empleados, setEmpleados] = useState([]);
-  const [showForm, setShowForm] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [changingState, setChangingState] = useState(null);
+  const [editingEmpleado, setEditingEmpleado] = useState(null);
+  const [changingPassword, setChangingPassword] = useState(null);
   const [roles, setRoles] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [formData, setFormData] = useState({
@@ -22,9 +76,13 @@ export function EmpleadosPage() {
     tipo_documento: 'CC',
     documento: '',
     telefono: '',
-    rol: '',
     contrasena: '',
-    categorias: []
+    categorias: [],
+    fecha_salida: ''
+  });
+  const [passwordData, setPasswordData] = useState({
+    nuevaContrasena: '',
+    confirmarContrasena: ''
   });
   const { alert, success, error: showError, warning } = useAlert();
   const { can } = usePermissions();
@@ -32,7 +90,7 @@ export function EmpleadosPage() {
   if (!can('VIEW_EMPLEADOS')) {
     return (
       <MainLayout title="Empleados">
-        <AlertSimple message="No tienes permiso para acceder a esta seccion" type="error" />
+        <AlertSimple message="No tienes permiso para acceder a esta sección" type="error" />
       </MainLayout>
     );
   }
@@ -49,27 +107,134 @@ export function EmpleadosPage() {
         api.getRoles(),
         api.getCategorias()
       ]);
-      setEmpleados(empRes.data || []);
+
+      const usuariosEmpleados = (empRes.data || []).filter(usuario =>
+        usuario.rolInfo?.nombre === 'Empleado'
+      );
+
+      const empleadosConCategorias = await Promise.all(
+        usuariosEmpleados.map(async (empleado) => {
+          try {
+            const usuarioDetalle = await api.getUsuarioById(empleado.id);
+            return {
+              ...empleado,
+              categorias: usuarioDetalle.data?.categorias || []
+            };
+          } catch (error) {
+            return {
+              ...empleado,
+              categorias: []
+            };
+          }
+        })
+      );
+
+      setEmpleados(empleadosConCategorias);
       setRoles(rolRes.data || []);
       setCategorias(catRes.data || []);
-      logger.success('Empleados cargados', `${empRes.data?.length || 0} empleados`);
+      logger.success('Empleados cargados', `${empleadosConCategorias.length} empleados`);
     } catch (err) {
       logger.error('Error al cargar empleados', err.message);
-      showError(err.message || 'Error al cargar empleados');
+      showError('Error al cargar la lista de empleados');
     }
     setLoading(false);
+  };
+
+  const formatFecha = (fechaString) => {
+    if (!fechaString) return '-';
+
+    try {
+      const fecha = new Date(fechaString);
+      if (isNaN(fecha.getTime())) return '-';
+      return fecha.toLocaleDateString('es-ES');
+    } catch (error) {
+      return '-';
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.nombre.trim() || !formData.documento.trim() || !formData.rol || !formData.contrasena.trim()) {
-      warning('Completa: Nombre, Documento, Rol y Contraseña');
+    if (!formData.nombre.trim() || !formData.documento.trim() || !formData.contrasena.trim()) {
+      warning('Completa todos los campos obligatorios: Nombre, Documento y Contraseña');
       return;
     }
 
     if (formData.contrasena.length < 6) {
       warning('La contraseña debe tener mínimo 6 caracteres');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const rolEmpleado = roles.find(rol => rol.nombre === 'Empleado');
+      if (!rolEmpleado) {
+        throw new Error('No se encontró el rol Empleado');
+      }
+
+      const dataToSend = {
+        nombre: formData.nombre,
+        apellido: formData.apellido,
+        tipo_documento: formData.tipo_documento,
+        documento: formData.documento,
+        email: formData.email || undefined,
+        telefono: formData.telefono || undefined,
+        rol: rolEmpleado.id,
+        contrasena: formData.contrasena,
+        categorias: formData.categorias.length > 0 ? formData.categorias : undefined
+      };
+
+      await api.crearUsuario(dataToSend);
+      
+      success('¡Empleado creado exitosamente!', 'El empleado ha sido registrado en el sistema');
+      logger.success('Empleado creado', formData.nombre);
+
+      setFormData({
+        nombre: '',
+        apellido: '',
+        email: '',
+        tipo_documento: 'CC',
+        documento: '',
+        telefono: '',
+        contrasena: '',
+        categorias: []
+      });
+      setShowModal(false);
+      fetchData();
+    } catch (err) {
+      logger.error('Error al crear empleado', err.message);
+      showError(err.message || 'Error al crear el empleado');
+    }
+    setSaving(false);
+  };
+
+  const handleEdit = (empleado) => {
+    const categoriasIds = Array.isArray(empleado.categorias)
+      ? empleado.categorias
+          .map(cat => cat?.id || null)
+          .filter(Boolean)
+      : [];
+
+    setEditingEmpleado(empleado);
+    setFormData({
+      nombre: empleado.nombre || '',
+      apellido: empleado.apellido || '',
+      email: empleado.email || '',
+      tipo_documento: empleado.tipo_documento || 'CC',
+      documento: empleado.documento || '',
+      telefono: empleado.telefono || '',
+      contrasena: '',
+      categorias: categoriasIds,
+      fecha_salida: empleado.fecha_salida ? empleado.fecha_salida.split('T')[0] : ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+
+    if (!editingEmpleado || !formData.nombre.trim() || !formData.documento.trim()) {
+      warning('Completa los campos obligatorios: Nombre y Documento');
       return;
     }
 
@@ -82,15 +247,15 @@ export function EmpleadosPage() {
         documento: formData.documento,
         email: formData.email || undefined,
         telefono: formData.telefono || undefined,
-        rol: parseInt(formData.rol),
-        contrasena: formData.contrasena,
-        categorias: formData.categorias.length > 0 ? formData.categorias.map(c => parseInt(c)) : undefined
+        categorias: formData.categorias.length > 0 ? formData.categorias : undefined,
+        fecha_salida: formData.fecha_salida || undefined
       };
 
-      await api.crearUsuario(dataToSend);
-      success('Empleado creado exitosamente!');
-      logger.success('Empleado creado', formData.nombre);
+      await api.actualizarUsuario(editingEmpleado.id, dataToSend);
       
+      success('¡Empleado actualizado exitosamente!', 'Los cambios han sido guardados correctamente');
+      logger.success('Empleado actualizado', formData.nombre);
+
       setFormData({
         nombre: '',
         apellido: '',
@@ -98,15 +263,94 @@ export function EmpleadosPage() {
         tipo_documento: 'CC',
         documento: '',
         telefono: '',
-        rol: '',
         contrasena: '',
-        categorias: []
+        categorias: [],
+        fecha_salida: ''
       });
-      setShowForm(false);
+      setEditingEmpleado(null);
+      setShowEditModal(false);
       fetchData();
     } catch (err) {
-      logger.error('Error al crear empleado', err.message);
-      showError(err.message || 'Error al crear empleado');
+      logger.error('Error al actualizar empleado', err.message);
+      showError(err.message || 'Error al actualizar el empleado');
+    }
+    setSaving(false);
+  };
+
+  const handleToggleEstado = async (empleado) => {
+    const nuevoEstado = empleado.estado === 1 ? 0 : 1;
+    const accion = nuevoEstado === 1 ? 'activar' : 'desactivar';
+    const accionTexto = nuevoEstado === 1 ? 'activado' : 'desactivado';
+
+    if (!window.confirm(`¿Estás seguro de que quieres ${accion} al empleado "${empleado.nombre} ${empleado.apellido}"?`)) {
+      return;
+    }
+
+    setChangingState(empleado.id);
+    try {
+      await api.cambiarEstadoUsuario(empleado.id, nuevoEstado);
+      
+      success(
+        `¡Empleado ${accionTexto} exitosamente!`,
+        `El empleado ha sido ${accionTexto} del sistema`
+      );
+      logger.success(`Empleado ${accionTexto}`, empleado.nombre);
+      
+      fetchData();
+    } catch (err) {
+      logger.error(`Error al ${accion} empleado`, err.message);
+      showError(err.message || `Error al ${accion} el empleado`);
+    } finally {
+      setChangingState(null);
+    }
+  };
+
+  const handleOpenPasswordModal = (empleado) => {
+    setChangingPassword(empleado);
+    setPasswordData({
+      nuevaContrasena: '',
+      confirmarContrasena: ''
+    });
+    setShowPasswordModal(true);
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+
+    if (!passwordData.nuevaContrasena.trim() || !passwordData.confirmarContrasena.trim()) {
+      warning('Completa ambos campos de contraseña');
+      return;
+    }
+
+    if (passwordData.nuevaContrasena.length < 6) {
+      warning('La contraseña debe tener mínimo 6 caracteres');
+      return;
+    }
+
+    if (passwordData.nuevaContrasena !== passwordData.confirmarContrasena) {
+      warning('Las contraseñas no coinciden');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await api.cambiarPasswordUsuario(changingPassword.id, passwordData.nuevaContrasena);
+      
+      success(
+        '¡Contraseña cambiada exitosamente!',
+        'La contraseña ha sido actualizada correctamente'
+      );
+      logger.success('Contraseña cambiada', changingPassword.nombre);
+
+      setPasswordData({
+        nuevaContrasena: '',
+        confirmarContrasena: ''
+      });
+      setChangingPassword(null);
+      setShowPasswordModal(false);
+    } catch (err) {
+      logger.error('Error al cambiar contraseña', err.message);
+      showError(err.message || 'Error al cambiar la contraseña');
     }
     setSaving(false);
   };
@@ -120,124 +364,304 @@ export function EmpleadosPage() {
     }));
   };
 
+  const handleOpenModal = () => {
+    setShowModal(true);
+    setFormData({
+      nombre: '',
+      apellido: '',
+      email: '',
+      tipo_documento: 'CC',
+      documento: '',
+      telefono: '',
+      contrasena: '',
+      categorias: []
+    });
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setShowEditModal(false);
+    setShowPasswordModal(false);
+    setEditingEmpleado(null);
+    setChangingPassword(null);
+    setFormData({
+      nombre: '',
+      apellido: '',
+      email: '',
+      tipo_documento: 'CC',
+      documento: '',
+      telefono: '',
+      contrasena: '',
+      categorias: []
+    });
+    setPasswordData({
+      nuevaContrasena: '',
+      confirmarContrasena: ''
+    });
+  };
+
+  const getEstadoColor = (estado) => {
+    return estado === 1
+      ? { background: '#DCFCE7', color: '#166534', text: 'Activo' }
+      : { background: '#FEE2E2', color: '#7F1D1D', text: 'Inactivo' };
+  };
+
+  const getNombresCategorias = (empleado) => {
+    if (!empleado.categorias || !Array.isArray(empleado.categorias) || empleado.categorias.length === 0) {
+      return 'Sin categorías asignadas';
+    }
+
+    return empleado.categorias.map(cat => cat.nombre).filter(Boolean).join(', ');
+  };
+
   return (
-    <MainLayout title="Gestión de Empleados">
+    <MainLayout title="Empleados">
       {alert && <AlertSimple message={alert.message} type={alert.type} />}
 
-      <div className="page-header">
-        <h4 style={{margin: 0, color: '#9CA3AF', fontSize: '0.9rem', textTransform: 'uppercase', fontWeight: '700'}}>
-          Total: {empleados.length} empleados
-        </h4>
+      <div>
+        <div className="categorias-main-title">
+          <h4 style={{ margin: 0 }}>Listado de Empleados</h4>
+        </div>
+        <p style={{ color: '#6B7280', margin: '0.5rem 0 0 0' }}>
+          Total: {empleados.length} empleado{empleados.length !== 1 ? 's' : ''}
+        </p>
         {can('CREATE_EMPLEADO') && (
-          <Button onClick={() => setShowForm(!showForm)}>+ Nuevo Empleado</Button>
+          <Button onClick={handleOpenModal}>+ Nuevo Empleado</Button>
         )}
       </div>
 
-      {showForm && (
-        <Card>
-          <h4 style={{marginBottom: '1.5rem', fontWeight: '700', fontSize: '1.2rem', color: '#1F2937'}}>Crear Empleado</h4>
-          <form onSubmit={handleSubmit} className="form-layout">
-            <div style={{gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem'}}>
-              <Input
-                label="Nombre *"
-                value={formData.nombre}
-                onChange={(e) => setFormData({...formData, nombre: e.target.value})}
-                placeholder="Nombre"
-                required
-              />
-              <Input
-                label="Apellido"
-                value={formData.apellido}
-                onChange={(e) => setFormData({...formData, apellido: e.target.value})}
-                placeholder="Apellido"
-              />
-            </div>
+      {/* Modal para CREAR empleado */}
+      <Modal show={showModal} onClose={handleCloseModal}>
+        <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', fontSize: '1.2rem', color: '#1F2937' }}>Crear Empleado</h4>
+        <form onSubmit={handleSubmit} className="form-layout">
+          <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            <Input
+              label="Nombre *"
+              value={formData.nombre}
+              onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+              placeholder="Nombre"
+              required
+              autoFocus
+            />
+            <Input
+              label="Apellido"
+              value={formData.apellido}
+              onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
+              placeholder="Apellido"
+            />
+          </div>
 
-            <div style={{gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem'}}>
-              <Select
-                label="Tipo Documento *"
-                value={formData.tipo_documento}
-                onChange={(e) => setFormData({...formData, tipo_documento: e.target.value})}
-                options={[
-                  {id: 'CC', nombre: 'Cédula de Ciudadanía'},
-                  {id: 'TI', nombre: 'Tarjeta de Identidad'},
-                  {id: 'CE', nombre: 'Cédula de Extranjería'}
-                ]}
-                required
-              />
-              <Input
-                label="Documento *"
-                value={formData.documento}
-                onChange={(e) => setFormData({...formData, documento: e.target.value})}
-                placeholder="Número de documento"
-                required
-              />
-            </div>
+          <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            <Select
+              label="Tipo Documento *"
+              value={formData.tipo_documento}
+              onChange={(e) => setFormData({ ...formData, tipo_documento: e.target.value })}
+              options={[
+                { id: 'CC', nombre: 'Cédula de Ciudadanía' },
+                { id: 'TI', nombre: 'Tarjeta de Identidad' },
+                { id: 'CE', nombre: 'Cédula de Extranjería' }
+              ]}
+              required
+            />
+            <Input
+              label="Documento *"
+              value={formData.documento}
+              onChange={(e) => setFormData({ ...formData, documento: e.target.value })}
+              placeholder="Número de documento"
+              required
+            />
+          </div>
 
-            <div style={{gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem'}}>
-              <Input
-                label="Email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                placeholder="email@example.com"
-              />
-              <Input
-                label="Telefono"
-                value={formData.telefono}
-                onChange={(e) => setFormData({...formData, telefono: e.target.value})}
-                placeholder="3001234567"
-              />
-            </div>
+          <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            <Input
+              label="Email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="email@example.com"
+            />
+            <Input
+              label="Telefono"
+              value={formData.telefono}
+              onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+              placeholder="3001234567"
+            />
+          </div>
 
-            <div style={{gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem'}}>
-              <Select
-                label="Rol *"
-                value={formData.rol}
-                onChange={(e) => setFormData({...formData, rol: e.target.value})}
-                options={roles}
-                required
-              />
-              <Input
-                label="Contraseña *"
-                type="password"
-                value={formData.contrasena}
-                onChange={(e) => setFormData({...formData, contrasena: e.target.value})}
-                placeholder="Mínimo 6 caracteres"
-                required
-              />
-            </div>
+          <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            <Input
+              label="Contraseña *"
+              type="password"
+              value={formData.contrasena}
+              onChange={(e) => setFormData({ ...formData, contrasena: e.target.value })}
+              placeholder="Mínimo 6 caracteres"
+              required
+            />
+          </div>
 
-            {categorias.length > 0 && (
-              <div style={{gridColumn: '1 / -1'}}>
-                <p style={{marginBottom: '0.8rem', fontWeight: '600', color: '#1F2937'}}>Categorías de Servicios</p>
-                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.8rem'}}>
-                  {categorias.map(cat => (
-                    <label key={cat.id} style={{display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', padding: '0.5rem', background: '#F3F4F6', borderRadius: '6px'}}>
-                      <input
-                        type="checkbox"
-                        checked={formData.categorias.includes(cat.id)}
-                        onChange={() => handleCategoriaToggle(cat.id)}
-                        style={{cursor: 'pointer'}}
-                      />
-                      <span style={{fontSize: '0.9rem', fontWeight: '500'}}>{cat.nombre}</span>
-                    </label>
-                  ))}
-                </div>
+          {categorias.length > 0 && (
+            <div style={{ gridColumn: '1 / -1' }}>
+              <p style={{ marginBottom: '0.8rem', fontWeight: '600', color: '#1F2937' }}>Categorías de Servicios</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.8rem' }}>
+                {categorias.map(cat => (
+                  <label key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', padding: '0.5rem', background: '#F3F4F6', borderRadius: '6px' }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.categorias.includes(cat.id)}
+                      onChange={() => handleCategoriaToggle(cat.id)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>{cat.nombre}</span>
+                  </label>
+                ))}
               </div>
-            )}
-
-            <div className="form-actions" style={{gridColumn: '1 / -1'}}>
-              <Button variant="primary" disabled={saving}>
-                {saving ? 'Creando...' : 'Crear Empleado'}
-              </Button>
-              <Button variant="secondary" onClick={() => setShowForm(false)}>
-                Cancelar
-              </Button>
             </div>
-          </form>
-        </Card>
-      )}
+          )}
+
+          <div className="form-actions" style={{ gridColumn: '1 / -1' }}>
+            <Button variant="primary" disabled={saving}>
+              {saving ? 'Creando...' : 'Crear Empleado'}
+            </Button>
+            <Button variant="secondary" onClick={handleCloseModal}>
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal para EDITAR empleado */}
+      <Modal show={showEditModal} onClose={handleCloseModal}>
+        <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', fontSize: '1.2rem', color: '#1F2937' }}>
+          Editar Empleado: {editingEmpleado?.nombre} {editingEmpleado?.apellido}
+        </h4>
+        <form onSubmit={handleUpdate} className="form-layout">
+          <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            <Input
+              label="Nombre *"
+              value={formData.nombre}
+              onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+              placeholder="Nombre"
+              required
+              autoFocus
+            />
+            <Input
+              label="Apellido"
+              value={formData.apellido}
+              onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
+              placeholder="Apellido"
+            />
+          </div>
+
+          <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            <Select
+              label="Tipo Documento *"
+              value={formData.tipo_documento}
+              onChange={(e) => setFormData({ ...formData, tipo_documento: e.target.value })}
+              options={[
+                { id: 'CC', nombre: 'Cédula de Ciudadanía' },
+                { id: 'TI', nombre: 'Tarjeta de Identidad' },
+                { id: 'CE', nombre: 'Cédula de Extranjería' }
+              ]}
+              required
+            />
+            <Input
+              label="Documento *"
+              value={formData.documento}
+              onChange={(e) => setFormData({ ...formData, documento: e.target.value })}
+              placeholder="Número de documento"
+              required
+            />
+          </div>
+
+          <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            <Input
+              label="Email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="email@example.com"
+            />
+            <Input
+              label="Telefono"
+              value={formData.telefono}
+              onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+              placeholder="3001234567"
+            />
+          </div>
+
+          <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            <Input
+              label="Fecha de Salida"
+              type="date"
+              value={formData.fecha_salida}
+              onChange={(e) => setFormData({ ...formData, fecha_salida: e.target.value })}
+              placeholder="Fecha de salida (opcional)"
+            />
+          </div>
+
+          {categorias.length > 0 && (
+            <div style={{ gridColumn: '1 / -1' }}>
+              <p style={{ marginBottom: '0.8rem', fontWeight: '600', color: '#1F2937' }}>Categorías de Servicios</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.8rem' }}>
+                {categorias.map(cat => (
+                  <label key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', padding: '0.5rem', background: '#F3F4F6', borderRadius: '6px' }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.categorias.includes(cat.id)}
+                      onChange={() => handleCategoriaToggle(cat.id)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>{cat.nombre}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="form-actions" style={{ gridColumn: '1 / -1' }}>
+            <Button variant="primary" disabled={saving}>
+              {saving ? 'Actualizando...' : 'Actualizar Empleado'}
+            </Button>
+            <Button variant="secondary" onClick={handleCloseModal}>
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal para CAMBIAR CONTRASEÑA */}
+      <Modal show={showPasswordModal} onClose={handleCloseModal}>
+        <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', fontSize: '1.2rem', color: '#1F2937' }}>
+          Cambiar Contraseña: {changingPassword?.nombre} {changingPassword?.apellido}
+        </h4>
+        <form onSubmit={handleChangePassword} className="form-layout">
+          <Input
+            label="Nueva Contraseña *"
+            type="password"
+            value={passwordData.nuevaContrasena}
+            onChange={(e) => setPasswordData({ ...passwordData, nuevaContrasena: e.target.value })}
+            placeholder="Mínimo 6 caracteres"
+            required
+            autoFocus
+          />
+          <Input
+            label="Confirmar Contraseña *"
+            type="password"
+            value={passwordData.confirmarContrasena}
+            onChange={(e) => setPasswordData({ ...passwordData, confirmarContrasena: e.target.value })}
+            placeholder="Repite la contraseña"
+            required
+          />
+          <div className="form-actions" style={{ gridColumn: '1 / -1' }}>
+            <Button variant="primary" disabled={saving}>
+              {saving ? 'Cambiando...' : 'Cambiar Contraseña'}
+            </Button>
+            <Button variant="secondary" onClick={handleCloseModal}>
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       <div className="table-container">
         {loading ? (
@@ -249,22 +673,112 @@ export function EmpleadosPage() {
                 <th>Nombre</th>
                 <th>Email</th>
                 <th>Documento</th>
-                <th>Rol</th>
-                <th>Telefono</th>
+                <th>Categorías</th>
+                <th>Teléfono</th>
+                <th>Fecha Registro</th>
+                <th>Fecha Salida</th>
                 <th>Estado</th>
+                {can('EDIT_EMPLEADO') && <th>Acciones</th>}
               </tr>
             </thead>
             <tbody>
-              {empleados.map(e => (
-                <tr key={e.id}>
-                  <td><strong>{e.nombre} {e.apellido}</strong></td>
-                  <td>{e.email || '-'}</td>
-                  <td>{e.tipo_documento}: {e.documento}</td>
-                  <td><span style={{padding: '0.3rem 0.8rem', background: '#E0E7FF', color: '#3730A3', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600'}}>{e.rolInfo?.nombre}</span></td>
-                  <td>{e.telefono || '-'}</td>
-                  <td><span style={{padding: '0.3rem 0.8rem', background: e.estado === 1 ? '#D1FAE5' : '#FEE2E2', color: e.estado === 1 ? '#065F46' : '#7F1D1D', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600'}}>{e.estado === 1 ? 'Activo' : 'Inactivo'}</span></td>
-                </tr>
-              ))}
+              {empleados.map(empleado => {
+                const estadoInfo = getEstadoColor(empleado.estado);
+                const categoriasNombres = getNombresCategorias(empleado);
+
+                return (
+                  <tr key={empleado.id}>
+                    <td><strong>{empleado.nombre} {empleado.apellido}</strong></td>
+                    <td>{empleado.email || '-'}</td>
+                    <td>{empleado.tipo_documento}: {empleado.documento}</td>
+                    <td style={{ maxWidth: '200px' }}>
+                      <span style={{
+                        color: '#6B7280',
+                        fontSize: '0.85rem',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}>
+                        {categoriasNombres}
+                      </span>
+                    </td>
+                    <td>{empleado.telefono || '-'}</td>
+                    <td style={{ fontSize: '0.85rem', color: '#6B7280' }}>
+                      {formatFecha(empleado.fecha_registro)}
+                    </td>
+                    <td style={{ fontSize: '0.85rem', color: '#6B7280' }}>
+                      {formatFecha(empleado.fecha_salida)}
+                    </td>
+                    <td>
+                      <span style={{
+                        padding: '0.35rem 0.9rem',
+                        borderRadius: '20px',
+                        fontSize: '0.75rem',
+                        fontWeight: '700',
+                        backgroundColor: estadoInfo.background,
+                        color: estadoInfo.color,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>
+                        {estadoInfo.text}
+                      </span>
+                    </td>
+                    {can('EDIT_EMPLEADO') && (
+                      <td>
+                        <div className="table-actions" style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleEdit(empleado)}
+                            title="Editar empleado"
+                            disabled={changingState === empleado.id}
+                            style={{
+                              padding: '0.2rem 0.5rem',
+                              fontSize: '0.75rem',
+                              minWidth: 'auto'
+                            }}
+                          >
+                            <i className="bi bi-pencil"></i>
+                          </Button>
+                          <Button
+                            variant={empleado.estado === 1 ? 'warning' : 'success'}
+                            size="sm"
+                            onClick={() => handleToggleEstado(empleado)}
+                            title={empleado.estado === 1 ? 'Desactivar empleado' : 'Activar empleado'}
+                            disabled={changingState === empleado.id}
+                            style={{
+                              padding: '0.2rem 0.5rem',
+                              fontSize: '0.75rem',
+                              minWidth: 'auto'
+                            }}
+                          >
+                            {changingState === empleado.id ? (
+                              <i className="bi bi-arrow-repeat"></i>
+                            ) : (
+                              <i className={empleado.estado === 1 ? 'bi bi-pause' : 'bi bi-play'}></i>
+                            )}
+                          </Button>
+                          <Button
+                            variant="info"
+                            size="sm"
+                            onClick={() => handleOpenPasswordModal(empleado)}
+                            title="Cambiar contraseña"
+                            disabled={changingState === empleado.id}
+                            style={{
+                              padding: '0.2rem 0.5rem',
+                              fontSize: '0.75rem',
+                              minWidth: 'auto'
+                            }}
+                          >
+                            <i className="bi bi-key"></i>
+                          </Button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         ) : (

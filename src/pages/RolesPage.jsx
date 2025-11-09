@@ -7,9 +7,58 @@ import { AlertSimple } from '../components/common/AlertSimple';
 import { useAlert } from '../hooks/useAlert';
 import '../pages/Pages.css';
 
+function Modal({ show, onClose, children }) {
+  if (!show) return null;
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '12px',
+        padding: '2rem',
+        width: '90%',
+        maxWidth: '500px',
+        maxHeight: '90vh',
+        overflowY: 'auto',
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+        position: 'relative'
+      }}>
+        <button 
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '1rem',
+            right: '1rem',
+            background: 'none',
+            border: 'none',
+            fontSize: '1.5rem',
+            cursor: 'pointer',
+            color: '#666',
+            zIndex: 1001
+          }}
+        >
+          ×
+        </button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function RolesPage() {
   const [roles, setRoles] = useState([]);
-  const [showForm, setShowForm] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -26,27 +75,13 @@ export function RolesPage() {
   const fetchRoles = async () => {
     setLoading(true);
     try {
-      // Usar fetch directo con tu estructura
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3000/api/roles', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        setRoles(result.data || []);
-        logger.success('Roles cargados', `${result.data?.length || 0} roles`);
-      } else {
-        throw new Error(result.message || 'Error al cargar roles');
-      }
+      const result = await api.getRoles();
+      setRoles(result.data || []);
+      logger.success('Roles cargados', `${result.data?.length || 0} roles`);
     } catch (err) {
       logger.error('Error al cargar roles', err.message);
       showError(err.message || 'Error al cargar roles');
-      setRoles([]); // Evitar crash
+      setRoles([]);
     }
     setLoading(false);
   };
@@ -57,7 +92,7 @@ export function RolesPage() {
       nombre: rol.nombre,
       descripcion: rol.descripcion || ''
     });
-    setShowForm(true);
+    setShowModal(true);
   };
 
   const handleSubmit = async (e) => {
@@ -70,27 +105,24 @@ export function RolesPage() {
 
     setSaving(true);
     try {
-      const token = localStorage.getItem('token');
-      const url = editingId 
-        ? `http://localhost:3000/api/roles/${editingId}` 
-        : 'http://localhost:3000/api/roles';
-      
-      const response = await fetch(url, {
-        method: editingId ? 'PUT' : 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
-
-      const result = await response.json();
+      let result;
+      if (editingId) {
+        result = await api.request(`/roles/${editingId}`, {
+          method: 'PUT',
+          body: JSON.stringify(formData)
+        });
+      } else {
+        result = await api.request('/roles', {
+          method: 'POST',
+          body: JSON.stringify(formData)
+        });
+      }
 
       if (result.success) {
         success(editingId ? 'Rol actualizado!' : 'Rol creado!');
         setFormData({ nombre: '', descripcion: '' });
         setEditingId(null);
-        setShowForm(false);
+        setShowModal(false);
         fetchRoles();
       } else {
         throw new Error(result.message || 'Error al guardar');
@@ -106,15 +138,9 @@ export function RolesPage() {
     if (!window.confirm('¿Eliminar este rol?')) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3000/api/roles/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const result = await api.request(`/roles/${id}`, {
+        method: 'DELETE'
       });
-
-      const result = await response.json();
 
       if (result.success) {
         success('Rol eliminado!');
@@ -128,6 +154,18 @@ export function RolesPage() {
     }
   };
 
+  const handleOpenModal = () => {
+    setShowModal(true);
+    setEditingId(null);
+    setFormData({ nombre: '', descripcion: '' });
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditingId(null);
+    setFormData({ nombre: '', descripcion: '' });
+  };
+
   return (
     <MainLayout title="Gestión de Roles">
       {alert && <AlertSimple message={alert.message} type={alert.type} />}
@@ -136,85 +174,96 @@ export function RolesPage() {
         <h4 style={{margin: 0, color: '#9CA3AF', fontSize: '0.9rem', textTransform: 'uppercase', fontWeight: '700'}}>
           Total: {roles.length} roles
         </h4>
-        <Button onClick={() => {
-          setShowForm(!showForm); 
-          setEditingId(null); 
-          setFormData({nombre: '', descripcion: ''});
-        }}>
+        <Button onClick={handleOpenModal}>
           <i className="bi bi-plus-circle"></i> Nuevo Rol
         </Button>
       </div>
 
-      {showForm && (
-        <Card>
-          <h4 style={{marginBottom: '1.5rem', fontWeight: '700', fontSize: '1.2rem', color: '#1F2937'}}>
-            <i className="bi bi-shield-check"></i> {editingId ? 'Editar Rol' : 'Crear Rol'}
-          </h4>
-          <form onSubmit={handleSubmit} className="form-layout">
-            <Input
-              label="Nombre *"
-              value={formData.nombre}
-              onChange={(e) => setFormData({...formData, nombre: e.target.value})}
-              placeholder="Ej: Recepcionista"
-              required
-            />
-            <Input
-              label="Descripción"
-              value={formData.descripcion}
-              onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
-              placeholder="Descripción del rol"
-            />
-            <div className="form-actions" style={{gridColumn: '1 / -1'}}>
-              <Button variant="primary" type="submit" disabled={saving}>
-                {saving ? 'Guardando...' : editingId ? 'Actualizar' : 'Crear'}
-              </Button>
-              <Button variant="secondary" type="button" onClick={() => {setShowForm(false); setEditingId(null);}}>
-                Cancelar
-              </Button>
-            </div>
-          </form>
-        </Card>
-      )}
+      {/* Modal para el formulario */}
+      <Modal show={showModal} onClose={handleCloseModal}>
+        <h4 style={{marginBottom: '1.5rem', fontWeight: '700', fontSize: '1.2rem', color: '#1F2937'}}>
+          <i className="bi bi-shield-check"></i> {editingId ? 'Editar Rol' : 'Crear Rol'}
+        </h4>
+        <form onSubmit={handleSubmit} className="form-layout">
+          <Input
+            label="Nombre "
+            value={formData.nombre}
+            onChange={(e) => setFormData({...formData, nombre: e.target.value})}
+            placeholder="Ej: Recepcionista"
+            required
+            autoFocus
+          />
+          <Input
+            label="Descripción"
+            value={formData.descripcion}
+            onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
+            placeholder="Descripción del rol"
+          />
+          <div className="form-actions">
+            <Button variant="primary" disabled={saving}>
+              {saving ? 'Guardando...' : editingId ? 'Actualizar' : 'Crear'}
+            </Button>
+            <Button variant="secondary" onClick={handleCloseModal}>
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
-      <div className="table-container">
-        {loading ? (
-          <Loading />
-        ) : roles.length > 0 ? (
-          <Card>
-            <table className="data-table">
-              <thead>
+      <Card>
+        <div className="card-header">
+          <h3 className="card-title">
+            <i className="bi bi-list-check"></i>
+            Listado de Roles
+          </h3>
+        </div>
+
+        <div className="table-responsive">
+          {loading ? (
+            <Loading />
+          ) : roles.length > 0 ? (
+            <table className="table table-sm table-hover">
+              <thead className="table-light">
                 <tr>
-                  <th>ID</th>
-                  <th>Nombre</th>
-                  <th>Descripción</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
+                  <th scope="col" className="fw-semibold">ID</th>
+                  <th scope="col" className="fw-semibold">Rol</th>
+                  <th scope="col" className="fw-semibold">Descripción</th>
+                  <th scope="col" className="fw-semibold">Estado</th>
+                  <th scope="col" className="fw-semibold text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {roles.map(rol => (
                   <tr key={rol.id}>
-                    <td>{rol.id}</td>
-                    <td><strong>{rol.nombre}</strong></td>
-                    <td>{rol.descripcion || '-'}</td>
-                    <td>
-                      <span className={`badge ${rol.estado === 1 ? 'badge-success' : 'badge-danger'}`}>
+                    <td className="align-middle">{rol.id}</td>
+                    <td className="align-middle">
+                      <strong>{rol.nombre}</strong>
+                    </td>
+                    <td className="align-middle">
+                      <small className="text-muted">
+                        {rol.descripcion || 'Sin descripción'}
+                      </small>
+                    </td>
+                    <td className="align-middle">
+                      <span className={`badge ${rol.estado === 1 ? 'bg-success' : 'bg-danger'}`}>
                         {rol.estado === 1 ? 'Activo' : 'Inactivo'}
                       </span>
                     </td>
-                    <td>
-                      <div style={{display: 'flex', gap: '0.5rem'}}>
+                    <td className="align-middle">
+                      <div className="d-flex gap-1 justify-content-center">
                         <Button 
                           onClick={() => handleEdit(rol)} 
-                          variant="secondary" 
-                          style={{fontSize: '0.85rem', padding: '0.4rem 0.8rem'}}
+                          variant="outline-primary" 
+                          size="sm"
+                          className="btn-sm"
                         >
                           <i className="bi bi-pencil"></i> Editar
                         </Button>
                         <Button 
                           onClick={() => handleDelete(rol.id)} 
-                          variant="danger" 
-                          style={{fontSize: '0.85rem', padding: '0.4rem 0.8rem'}}
+                          variant="outline-danger" 
+                          size="sm"
+                          className="btn-sm"
                         >
                           <i className="bi bi-trash"></i> Eliminar
                         </Button>
@@ -224,11 +273,11 @@ export function RolesPage() {
                 ))}
               </tbody>
             </table>
-          </Card>
-        ) : (
-          <Empty message="No hay roles registrados" />
-        )}
-      </div>
+          ) : (
+            <Empty message="No hay roles registrados" />
+          )}
+        </div>
+      </Card>
     </MainLayout>
   );
 }

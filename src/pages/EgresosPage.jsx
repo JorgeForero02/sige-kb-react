@@ -7,12 +7,61 @@ import { AlertSimple } from '../components/common/AlertSimple';
 import { useAlert } from '../hooks/useAlert';
 import '../pages/Pages.css';
 
+function Modal({ show, onClose, children }) {
+  if (!show) return null;
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '12px',
+        padding: '2rem',
+        width: '90%',
+        maxWidth: '500px',
+        maxHeight: '90vh',
+        overflowY: 'auto',
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+        position: 'relative'
+      }}>
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '1rem',
+            right: '1rem',
+            background: 'none',
+            border: 'none',
+            fontSize: '1.5rem',
+            cursor: 'pointer',
+            color: '#666',
+            zIndex: 1001
+          }}
+        >
+          ×
+        </button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function EgresosPage() {
   const [egresos, setEgresos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [fechaInicio, setFechaInicio] = useState(new Date().toISOString().slice(0, 10));
   const [fechaFin, setFechaFin] = useState(new Date().toISOString().slice(0, 10));
-  const [showForm, setShowForm] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [totales, setTotales] = useState({ total: 0, cantidad: 0 });
@@ -36,14 +85,14 @@ export function EgresosPage() {
         api.getEgresos(`?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`),
         api.getCategoriasEgreso()
       ]);
-      
+
       setEgresos(egresosRes.data?.egresos || []);
       setTotales({
         total: egresosRes.data?.total || 0,
         cantidad: egresosRes.data?.cantidad || 0
       });
       setCategorias(categoriasRes.data || []);
-      
+
       logger.success('Egresos cargados', `${egresosRes.data?.cantidad || 0} registros`);
     } catch (err) {
       logger.error('Error al cargar egresos', err.message);
@@ -60,17 +109,33 @@ export function EgresosPage() {
       return;
     }
 
+    const valorNumerico = parseFloat(formData.valor);
+    if (isNaN(valorNumerico) || valorNumerico <= 0) {
+      showError('El valor del egreso debe ser mayor a 0');
+      return;
+    }
+
+    const categoriaId = parseInt(formData.categoria);
+    if (isNaN(categoriaId)) {
+      showError('Selecciona una categoría válida');
+      return;
+    }
+  
+    const datosEgreso = {
+      fecha: new Date().toISOString().slice(0, 10),
+      categoria: categoriaId,
+      valor: valorNumerico,
+      medio_pago: formData.medio_pago,
+      proveedor: formData.proveedor || '',
+      descripcion: formData.descripcion || ''
+    };
+
+    console.log('Datos COMPLETOS que se enviarán:', datosEgreso);
+
     setSaving(true);
     try {
-      await api.crearEgreso({
-        fecha: fechaInicio,
-        categoria: parseInt(formData.categoria),
-        valor: parseFloat(formData.valor),
-        medio_pago: formData.medio_pago,
-        proveedor: formData.proveedor || null,
-        descripcion: formData.descripcion || null
-      });
-      
+      const resultado = await api.crearEgreso(datosEgreso);
+
       success('Egreso registrado exitosamente!');
       setFormData({
         categoria: '',
@@ -79,13 +144,40 @@ export function EgresosPage() {
         proveedor: '',
         descripcion: ''
       });
-      setShowForm(false);
-      fetchData();
+      onSuccess();
+      onClose();
     } catch (err) {
-      logger.error('Error al crear egreso', err.message);
-      showError(err.message || 'Error al registrar egreso');
+
+      const errorMessage = err.response?.data?.message ||
+        err.response?.data?.error ||
+        'Error al registrar egreso';
+
+      logger.error('Error al crear egreso', errorMessage);
+      showError(`Error: ${errorMessage}`);
     }
     setSaving(false);
+  };
+
+  const handleOpenModal = () => {
+    setShowModal(true);
+    setFormData({
+      categoria: '',
+      valor: '',
+      medio_pago: 'Efectivo',
+      proveedor: '',
+      descripcion: ''
+    });
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setFormData({
+      categoria: '',
+      valor: '',
+      medio_pago: 'Efectivo',
+      proveedor: '',
+      descripcion: ''
+    });
   };
 
   return (
@@ -93,26 +185,26 @@ export function EgresosPage() {
       {alert && <AlertSimple message={alert.message} type={alert.type} />}
 
       <div className="page-header">
-        <div style={{display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap'}}>
-          <Input 
-            label="Desde" 
-            type="date" 
-            value={fechaInicio} 
-            onChange={(e) => setFechaInicio(e.target.value)} 
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <Input
+            label="Desde"
+            type="date"
+            value={fechaInicio}
+            onChange={(e) => setFechaInicio(e.target.value)}
           />
-          <Input 
-            label="Hasta" 
-            type="date" 
-            value={fechaFin} 
-            onChange={(e) => setFechaFin(e.target.value)} 
+          <Input
+            label="Hasta"
+            type="date"
+            value={fechaFin}
+            onChange={(e) => setFechaFin(e.target.value)}
           />
         </div>
-        <Button onClick={() => setShowForm(!showForm)}>
+        <Button onClick={handleOpenModal}>
           <i className="bi bi-plus-circle"></i> Nuevo Egreso
         </Button>
       </div>
 
-      <div className="stats-grid" style={{marginBottom: '2rem'}}>
+      <div className="stats-grid" style={{ marginBottom: '2rem' }}>
         <div className="stat-card stat-danger">
           <div className="stat-icon"><i className="bi bi-cash-stack"></i></div>
           <div className="stat-info">
@@ -129,62 +221,67 @@ export function EgresosPage() {
         </div>
       </div>
 
-      {showForm && (
-        <Card>
-          <h4 className="form-title"><i className="bi bi-cash-coin"></i> Registrar Egreso</h4>
-          <form onSubmit={handleSubmit} className="form-layout">
-            <Select 
-              label="Categoría *" 
-              value={formData.categoria} 
-              onChange={(e) => setFormData({...formData, categoria: e.target.value})} 
-              options={categorias} 
-              required 
+      {/* Modal para el formulario */}
+      <Modal show={showModal} onClose={handleCloseModal}>
+        <h4 className="form-title" style={{ marginBottom: '1.5rem', fontWeight: '700', color: '#333' }}>
+          <i className="bi bi-cash-coin"></i> Registrar Egreso
+        </h4>
+        <form onSubmit={handleSubmit} className="form-layout">
+          <Select
+            label="Categoría *"
+            value={formData.categoria}
+            onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+            options={categorias.map(c => ({
+              id: c.id,
+              nombre: c.nombre
+            }))}
+            required
+            autoFocus
+          />
+          <Input
+            label="Valor *"
+            type="number"
+            value={formData.valor}
+            onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
+            min="0"
+            step="0.01"
+            required
+          />
+          <Select
+            label="Medio de Pago *"
+            value={formData.medio_pago}
+            onChange={(e) => setFormData({ ...formData, medio_pago: e.target.value })}
+            options={[
+              { id: 'Efectivo', nombre: 'Efectivo' },
+              { id: 'Tarjeta', nombre: 'Tarjeta' },
+              { id: 'Transferencia', nombre: 'Transferencia' }
+            ]}
+            required
+          />
+          <Input
+            label="Proveedor"
+            type="text"
+            value={formData.proveedor}
+            onChange={(e) => setFormData({ ...formData, proveedor: e.target.value })}
+          />
+          <div style={{ gridColumn: '1 / -1' }}>
+            <Input
+              label="Descripción"
+              type="text"
+              value={formData.descripcion}
+              onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
             />
-            <Input 
-              label="Valor *" 
-              type="number" 
-              value={formData.valor} 
-              onChange={(e) => setFormData({...formData, valor: e.target.value})} 
-              min="0"
-              step="0.01"
-              required 
-            />
-            <Select 
-              label="Medio de Pago *" 
-              value={formData.medio_pago} 
-              onChange={(e) => setFormData({...formData, medio_pago: e.target.value})} 
-              options={[
-                {id: 'Efectivo', nombre: 'Efectivo'},
-                {id: 'Tarjeta', nombre: 'Tarjeta'},
-                {id: 'Transferencia', nombre: 'Transferencia'}
-              ]} 
-              required 
-            />
-            <Input 
-              label="Proveedor" 
-              type="text" 
-              value={formData.proveedor} 
-              onChange={(e) => setFormData({...formData, proveedor: e.target.value})} 
-            />
-            <div style={{gridColumn: '1 / -1'}}>
-              <Input 
-                label="Descripción" 
-                type="text" 
-                value={formData.descripcion} 
-                onChange={(e) => setFormData({...formData, descripcion: e.target.value})} 
-              />
-            </div>
-            <div className="form-actions">
-              <Button variant="primary" disabled={saving}>
-                {saving ? 'Registrando...' : 'Registrar'}
-              </Button>
-              <Button variant="secondary" onClick={() => setShowForm(false)}>
-                Cancelar
-              </Button>
-            </div>
-          </form>
-        </Card>
-      )}
+          </div>
+          <div className="form-actions">
+            <Button variant="primary" disabled={saving}>
+              {saving ? 'Registrando...' : 'Registrar'}
+            </Button>
+            <Button variant="secondary" onClick={handleCloseModal}>
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {loading ? (
         <Loading />
@@ -210,7 +307,7 @@ export function EgresosPage() {
                     <td>{egr.proveedor || '-'}</td>
                     <td className="text-danger fw-bold">${parseFloat(egr.valor).toLocaleString('es-CO')}</td>
                     <td>
-                      <span className="badge" style={{background: '#FEE2E2', color: '#991B1B'}}>
+                      <span className="badge" style={{ background: '#FEE2E2', color: '#991B1B' }}>
                         {egr.medio_pago}
                       </span>
                     </td>

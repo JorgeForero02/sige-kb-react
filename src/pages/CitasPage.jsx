@@ -8,13 +8,63 @@ import { useAlert } from '../hooks/useAlert';
 import { useAuth } from '../hooks/useAuth';
 import '../pages/Pages.css';
 
+// Componente Modal para el formulario
+function Modal({ show, onClose, children }) {
+  if (!show) return null;
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '12px',
+        padding: '2rem',
+        width: '90%',
+        maxWidth: '500px',
+        maxHeight: '90vh',
+        overflowY: 'auto',
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+        position: 'relative'
+      }}>
+        <button 
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '1rem',
+            right: '1rem',
+            background: 'none',
+            border: 'none',
+            fontSize: '1.5rem',
+            cursor: 'pointer',
+            color: '#666',
+            zIndex: 1001
+          }}
+        >
+          ×
+        </button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function CitasPage() {
   const [citas, setCitas] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [servicios, setServicios] = useState([]);
   const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
-  const [showForm, setShowForm] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({ 
@@ -39,7 +89,6 @@ export function CitasPage() {
       const citasRes = await api.getCitas(`?fecha_inicio=${fecha}&fecha_fin=${fecha}`);
       let citasFiltradas = citasRes.data || [];
       
-      // EMPLEADO: Solo ve sus citas
       if (isEmpleado) {
         citasFiltradas = citasFiltradas.filter(c => c.encargado === user.id);
         logger.info('Citas del empleado', `${citasFiltradas.length} citas`);
@@ -47,7 +96,6 @@ export function CitasPage() {
       
       setCitas(citasFiltradas);
 
-      // Cargar datos para el formulario (todos los usuarios lo necesitan)
       const [clientesRes, usuariosRes, serviciosRes] = await Promise.all([
         api.getClientes(),
         api.getUsuarios(),
@@ -57,7 +105,6 @@ export function CitasPage() {
       setUsuarios(usuariosRes.data || []);
       setServicios(serviciosRes.data || []);
 
-      // Si es empleado, pre-seleccionar su ID
       if (isEmpleado && usuariosRes.data) {
         setFormData(prev => ({ ...prev, encargado: user.id.toString() }));
       }
@@ -114,7 +161,7 @@ export function CitasPage() {
         cliente: '',
         servicio: ''
       });
-      setShowForm(false);
+      setShowModal(false);
       fetchData();
     } catch (err) {
       logger.error('Error al crear cita', err.response?.data?.message || err.message);
@@ -135,72 +182,96 @@ export function CitasPage() {
     }
   };
 
+  const handleOpenModal = () => {
+    setShowModal(true);
+    setFormData({ 
+      hora_inicio: '', 
+      duracion: '30', 
+      encargado: isEmpleado ? user.id.toString() : '', 
+      cliente: '',
+      servicio: ''
+    });
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setFormData({ 
+      hora_inicio: '', 
+      duracion: '30', 
+      encargado: isEmpleado ? user.id.toString() : '', 
+      cliente: '',
+      servicio: ''
+    });
+  };
+
   return (
     <MainLayout title={isEmpleado ? "Mi Agenda" : "Gestión de Citas"}>
       {alert && <AlertSimple message={alert.message} type={alert.type} />}
 
       <div className="page-header">
         <Input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
-        <Button onClick={() => setShowForm(!showForm)}>
+        <Button onClick={handleOpenModal}>
           <i className="bi bi-plus-circle"></i> Nueva Cita
         </Button>
       </div>
 
-      {showForm && (
-        <Card>
-          <h4 className="form-title"><i className="bi bi-calendar-plus"></i> Agendar Cita</h4>
-          <form onSubmit={handleSubmit} className="form-layout">
-            <Input 
-              label="Hora *" 
-              type="time" 
-              value={formData.hora_inicio} 
-              onChange={(e) => setFormData({...formData, hora_inicio: e.target.value})} 
-              required 
-            />
-            <Select 
-              label="Servicio *" 
-              value={formData.servicio} 
-              onChange={(e) => handleServicioChange(e.target.value)}
-              options={servicios} 
-              required 
-            />
-            <Input 
-              label="Duración (minutos) *" 
-              type="number" 
-              value={formData.duracion} 
-              onChange={(e) => setFormData({...formData, duracion: e.target.value})} 
-              min="15"
-              step="15"
-              required 
-              disabled={!formData.servicio}
-              title="Se rellena automáticamente al seleccionar servicio"
-            />
-            <Select 
-              label="Cliente *" 
-              value={formData.cliente} 
-              onChange={(e) => setFormData({...formData, cliente: e.target.value})} 
-              options={clientes} 
-              required 
-            />
-            <Select 
-              label="Empleado *" 
-              value={formData.encargado} 
-              onChange={(e) => setFormData({...formData, encargado: e.target.value})} 
-              options={usuarios} 
-              required 
-              disabled={isEmpleado}
-            />
-            <div className="form-actions">
-              <Button variant="primary" disabled={saving}>
-                {saving ? 'Creando...' : 'Crear Cita'}
-              </Button>
-              <Button variant="secondary" onClick={() => setShowForm(false)}>
-                Cancelar
-              </Button>
-            </div>
-          </form>
-        </Card>
-      )}
+      {/* Modal para el formulario */}
+      <Modal show={showModal} onClose={handleCloseModal}>
+        <h4 className="form-title" style={{marginBottom: '1.5rem', fontWeight: '700', color: '#333'}}>
+          <i className="bi bi-calendar-plus"></i> Agendar Cita
+        </h4>
+        <form onSubmit={handleSubmit} className="form-layout">
+          <Input 
+            label="Hora *" 
+            type="time" 
+            value={formData.hora_inicio} 
+            onChange={(e) => setFormData({...formData, hora_inicio: e.target.value})} 
+            required 
+            autoFocus
+          />
+          <Select 
+            label="Servicio *" 
+            value={formData.servicio} 
+            onChange={(e) => handleServicioChange(e.target.value)}
+            options={servicios} 
+            required 
+          />
+          <Input 
+            label="Duración (minutos) *" 
+            type="number" 
+            value={formData.duracion} 
+            onChange={(e) => setFormData({...formData, duracion: e.target.value})} 
+            min="15"
+            step="15"
+            required 
+            disabled={!formData.servicio}
+            title="Se rellena automáticamente al seleccionar servicio"
+          />
+          <Select 
+            label="Cliente *" 
+            value={formData.cliente} 
+            onChange={(e) => setFormData({...formData, cliente: e.target.value})} 
+            options={clientes} 
+            required 
+          />
+          <Select 
+            label="Empleado *" 
+            value={formData.encargado} 
+            onChange={(e) => setFormData({...formData, encargado: e.target.value})} 
+            options={usuarios} 
+            required 
+            disabled={isEmpleado}
+          />
+          <div className="form-actions">
+            <Button variant="primary" disabled={saving}>
+              {saving ? 'Creando...' : 'Crear Cita'}
+            </Button>
+            <Button variant="secondary" onClick={handleCloseModal}>
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       <div className="citas-grid">
         {loading ? (

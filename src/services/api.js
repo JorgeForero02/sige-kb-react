@@ -86,6 +86,27 @@ class APIClient {
     });
   }
 
+  async actualizarUsuario(id, datos) {
+  return this.request(`/usuarios/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(datos),
+  });
+}
+
+async cambiarEstadoUsuario(id, estado) {
+  return this.request(`/usuarios/${id}/estado`, {
+    method: 'PATCH',
+    body: JSON.stringify({ estado }),
+  });
+}
+
+async cambiarPasswordUsuario(id, nuevaContrasena) {
+  return this.request(`/usuarios/${id}/password`, {
+    method: 'PATCH',
+    body: JSON.stringify({ nueva_contrasena: nuevaContrasena }),
+  });
+}
+
   // CATEGORIAS
   async getCategorias(params = '') {
     return this.request(`/categorias${params}`, { method: 'GET' });
@@ -95,6 +116,19 @@ class APIClient {
     return this.request('/categorias', {
       method: 'POST',
       body: JSON.stringify(datos),
+    });
+  }
+
+  async actualizarCategoria(id, datos) {
+    return this.request(`/categorias/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(datos),
+    });
+  }
+
+  async eliminarCategoria(id) {
+    return this.request(`/categorias/${id}`, {
+      method: 'DELETE',
     });
   }
 
@@ -118,6 +152,12 @@ class APIClient {
     });
   }
 
+  async eliminarServicio(id) {
+    return this.request(`/servicios/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // CLIENTES
   async getClientes(search = '') {
     return this.request(`/clientes${search ? `?search=${search}` : ''}`, { method: 'GET' });
@@ -128,6 +168,26 @@ class APIClient {
     return this.request('/clientes', {
       method: 'POST',
       body: JSON.stringify(datos),
+    });
+  }
+
+  async actualizarCliente(id, datos) {
+    return this.request(`/clientes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(datos),
+    });
+  }
+
+  async eliminarCliente(id) {
+    return this.request(`/clientes/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async cambiarEstadoCliente(id, estado) {
+    return this.request(`/clientes/${id}/estado`, {
+      method: 'PATCH',
+      body: JSON.stringify({ estado }),
     });
   }
 
@@ -182,6 +242,10 @@ class APIClient {
       body: JSON.stringify(datos),
     });
   }
+
+  async getCategoriasEgreso() {
+  return this.request('/categorias-egreso', { method: 'GET' });
+}
 
   // ROLES
   async getRoles(params = '') {
