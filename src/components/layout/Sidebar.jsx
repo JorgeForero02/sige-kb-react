@@ -13,6 +13,11 @@ export function Sidebar() {
 
   const { categorias, categoriasOpen, setCategoriasOpen } = useCategorias();
 
+  const categoriasActivas = categorias.filter(categoria => {
+    const estado = categoria.estado?.toString().toUpperCase();
+    return  estado === '1';
+  });
+
   useEffect(() => {
     if (location.pathname.includes('/categorias/') || location.pathname === '/categorias') {
       setCategoriasOpen(true);
@@ -113,7 +118,7 @@ export function Sidebar() {
           isOpen: categoriasOpen,
           onClick: handleCategoriasClick,
           mainPath: '/categorias', 
-          subItems: categorias.map(categoria => ({
+          subItems: categoriasActivas.map(categoria => ({
             path: `/categorias/${encodeURIComponent(categoria.nombre)}`,
             icon: 'bi-folder',
             label: categoria.nombre,
@@ -137,7 +142,7 @@ export function Sidebar() {
           icon: 'bi-tags-fill',
           isOpen: categoriasOpen,
           onClick: handleCategoriasClick,
-          subItems: categorias.map(categoria => ({
+          subItems: categoriasActivas.map(categoria => ({
             path: `/categorias/${encodeURIComponent(categoria.nombre)}`,
             icon: 'bi-folder',
             label: categoria.nombre,
@@ -158,7 +163,7 @@ export function Sidebar() {
         icon: 'bi-tags-fill',
         isOpen: categoriasOpen,
         onClick: handleCategoriasClick,
-        subItems: categorias.map(categoria => ({
+        subItems: categoriasActivas.map(categoria => ({
           path: `/categorias/${encodeURIComponent(categoria.nombre)}`,
           icon: 'bi-folder',
           label: categoria.nombre,
@@ -222,7 +227,6 @@ export function Sidebar() {
                   
                   <div className={`sidebar-dropdown-content ${item.isOpen ? 'show' : ''}`}>
                     {item.subItems.map((subItem, index) => {
-                      // Renderizar categorías normales
                       return (
                         <Link
                           key={subItem.path}

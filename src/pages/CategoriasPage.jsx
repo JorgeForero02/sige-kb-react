@@ -51,7 +51,6 @@ function Modal({ show, onClose, children, title, size = 'md' }) {
           width: '90%',
           maxWidth: getModalSize(),
           maxHeight: '80vh',
-          overflowY: 'auto',
           boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
         }}
       >
@@ -198,54 +197,67 @@ export function CategoriasPage() {
     e.preventDefault();
 
     if (!formData.nombre.trim()) {
-      warning('El nombre es obligatorio');
+      warning('El nombre de la categoría es obligatorio');
       return;
     }
 
     setSaving(true);
     try {
       await api.crearCategoria(formData);
-      success('Categoria creada exitosamente!');
+      success('¡Categoría creada exitosamente!');
       setFormData({ nombre: '', descripcion: '' });
       setShowModal(false);
       fetchCategorias();
       refreshCategorias();
     } catch (err) {
-      logger.error('Error al crear categoria', err.message);
-      showError(err.message || 'Error al crear categoria');
+      const errorMessage = err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        'Error al crear la categoría';
+      showError(errorMessage);
     }
     setSaving(false);
   };
 
   const handleEdit = (categoria) => {
-    setCategoriaToEdit(categoria);
-    setFormData({
-      nombre: categoria.nombre,
-      descripcion: categoria.descripcion || ''
-    });
-    setShowEditModal(true);
-  };
+  const estado = getEstadoCategoria(categoria);
+  
+  if (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') {
+    showError('No se puede editar una categoría inactiva.');
+    return;
+  }
+
+  setCategoriaToEdit(categoria);
+  setFormData({
+    nombre: categoria.nombre,
+    descripcion: categoria.descripcion || ''
+  });
+  setShowEditModal(true);
+};
 
   const handleUpdate = async (e) => {
     e.preventDefault();
 
     if (!formData.nombre.trim()) {
-      warning('El nombre es obligatorio');
+      warning('El nombre de la categoría es obligatorio');
       return;
     }
 
     setSaving(true);
     try {
       await api.actualizarCategoria(categoriaToEdit.id, formData);
-      success('Categoria actualizada exitosamente!');
+      success('¡Categoría actualizada exitosamente!');
       setShowEditModal(false);
       setCategoriaToEdit(null);
       setFormData({ nombre: '', descripcion: '' });
       fetchCategorias();
       refreshCategorias();
     } catch (err) {
-      logger.error('Error al actualizar categoria', err.message);
-      showError(err.message || 'Error al actualizar categoria');
+      const errorMessage = err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        'Error al actualizar la categoría';
+      showError(errorMessage);
     }
     setSaving(false);
   };
@@ -257,19 +269,22 @@ export function CategoriasPage() {
 
     try {
       await api.eliminarCategoria(categoria.id);
-      success('Categoria eliminada exitosamente!');
+      success('¡Categoría eliminada exitosamente!');
       fetchCategorias();
       refreshCategorias();
     } catch (err) {
-      logger.error('Error al eliminar categoria', err.message);
-      showError(err.message || 'Error al eliminar categoria');
+      const errorMessage = err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        'Error al eliminar la categoría';
+      showError(errorMessage);
     }
   };
 
   const handleToggleEstado = async (categoria) => {
     const nuevoEstado = getEstadoCategoria(categoria) === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO';
     const accion = nuevoEstado === 'ACTIVO' ? 'activar' : 'desactivar';
-    
+
     if (!window.confirm(`¿Estás seguro de que quieres ${accion} la categoría "${categoria.nombre}"?`)) {
       return;
     }
@@ -310,8 +325,8 @@ export function CategoriasPage() {
     <MainLayout title="Categorías">
       {alert && <AlertSimple message={alert.message} type={alert.type} />}
       {can('CREATE_CATEGORIA') && (
-          <Button onClick={handleOpenModal}class>+ Nueva Categoría</Button>
-        )}
+        <Button onClick={handleOpenModal}> + Nueva Categoría</Button>
+      )}
 
       <div className="page-header">
         <div>
@@ -542,10 +557,15 @@ export function CategoriasPage() {
                             variant="secondary"
                             className="btn-sm"
                             onClick={() => handleEdit(categoria)}
-                            title="Editar categoría"
+                            title={estado === 'INACTIVO' ? 'No se puede editar categorías inactivas' : 'Editar categoría'}
+                            disabled={estado === 'INACTIVO' || estado === 'INACTIVA'}
+                            style={{
+                              opacity: (estado === 'INACTIVO' || estado === 'INACTIVA') ? 0.5 : 1,
+                              cursor: (estado === 'INACTIVO' || estado === 'INACTIVA') ? 'not-allowed' : 'pointer'
+                            }}
                           >
                             <i className="bi bi-pencil"></i>
-                            Editar
+                            <span>Editar</span>
                           </Button>
                         )}
                         {can('DELETE_CATEGORIA') && (
@@ -556,18 +576,7 @@ export function CategoriasPage() {
                             title="Eliminar categoría"
                           >
                             <i className="bi bi-trash"></i>
-                            Eliminar
-                          </Button>
-                        )}
-                        {can('EDIT_CATEGORIA') && (
-                          <Button
-                            variant={estado === 'ACTIVO' ? 'warning' : 'success'}
-                            className="btn-sm"
-                            onClick={() => handleToggleEstado(categoria)}
-                            title={estado === 'ACTIVO' ? 'Desactivar categoría' : 'Activar categoría'}
-                          >
-                            <i className={estado === 'ACTIVO' ? 'bi bi-pause' : 'bi bi-play'}></i>
-                            {estado === 'ACTIVO' ? 'Desactivar' : 'Activar'}
+                            <span>Eliminar</span>
                           </Button>
                         )}
                       </div>

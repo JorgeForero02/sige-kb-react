@@ -1,62 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
-import api from '../services/api';
-import { logger } from '../services/logger';
-import { MainLayout } from '../components/layout/MainLayout';
-import { Card, Button, Input, Select, Loading, Empty } from '../components/common/Components';
-import { AlertSimple } from '../components/common/AlertSimple';
-import { useAlert } from '../hooks/useAlert';
-import '../pages/Pages.css';
-
-function Modal({ show, onClose, children }) {
-  if (!show) return null;
-
-  return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: '100%',
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 1000
-    }}>
-      <div style={{
-        background: 'white',
-        borderRadius: '12px',
-        padding: '2rem',
-        width: '90%',
-        maxWidth: '500px',
-        maxHeight: '90vh',
-        overflowY: 'auto',
-        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
-        position: 'relative'
-      }}>
-        <button
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: '1rem',
-            right: '1rem',
-            background: 'none',
-            border: 'none',
-            fontSize: '1.5rem',
-            cursor: 'pointer',
-            color: '#666',
-            zIndex: 1001
-          }}
-        >
-          ×
-        </button>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-export function EgresosPage() {
+﻿export function EgresosPage() {
   const [egresos, setEgresos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [fechaInicio, setFechaInicio] = useState(new Date().toISOString().slice(0, 10));
@@ -91,14 +33,26 @@ export function EgresosPage() {
         total: egresosRes.data?.total || 0,
         cantidad: egresosRes.data?.cantidad || 0
       });
-      setCategorias(categoriasRes.data || []);
+      
+      // DEBUG: Verificar estructura de categorías
+      console.log('Categorías recibidas:', categoriasRes.data);
+      
+      // Asegurar que las categorías sean un array
+      const categoriasData = categoriasRes.data || [];
+      setCategorias(categoriasData);
 
       logger.success('Egresos cargados', `${egresosRes.data?.cantidad || 0} registros`);
+      logger.success('Categorías cargadas', `${categoriasData.length} categorías`);
     } catch (err) {
       logger.error('Error al cargar egresos', err.message);
       showError(err.message || 'Error al cargar egresos');
     }
     setLoading(false);
+  };
+
+  // Añadir esta función faltante
+  const onSuccess = () => {
+    fetchData(); // Recargar los datos después de un éxito
   };
 
   const handleSubmit = async (e) => {
@@ -144,10 +98,9 @@ export function EgresosPage() {
         proveedor: '',
         descripcion: ''
       });
-      onSuccess();
-      onClose();
+      onSuccess(); // Llamar a la función onSuccess
+      setShowModal(false); // Cerrar el modal
     } catch (err) {
-
       const errorMessage = err.response?.data?.message ||
         err.response?.data?.error ||
         'Error al registrar egreso';
@@ -167,6 +120,9 @@ export function EgresosPage() {
       proveedor: '',
       descripcion: ''
     });
+    
+    // DEBUG: Verificar categorías cuando se abre el modal
+    console.log('Categorías disponibles al abrir modal:', categorias);
   };
 
   const handleCloseModal = () => {
@@ -178,6 +134,18 @@ export function EgresosPage() {
       proveedor: '',
       descripcion: ''
     });
+  };
+
+  // Función para formatear opciones del Select
+  const getCategoriaOptions = () => {
+    if (!categorias || categorias.length === 0) {
+      return [{ id: '', nombre: 'No hay categorías disponibles' }];
+    }
+    
+    return categorias.map(c => ({
+      id: c.id,
+      nombre: c.nombre || c.nombre_categoria || `Categoría ${c.id}`
+    }));
   };
 
   return (
@@ -231,10 +199,7 @@ export function EgresosPage() {
             label="Categoría *"
             value={formData.categoria}
             onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-            options={categorias.map(c => ({
-              id: c.id,
-              nombre: c.nombre
-            }))}
+            options={getCategoriaOptions()}
             required
             autoFocus
           />

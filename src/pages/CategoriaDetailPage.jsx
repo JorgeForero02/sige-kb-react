@@ -298,6 +298,13 @@ export function CategoriaDetailPage() {
   };
 
   const handleEditCliente = (cliente) => {
+    const estado = getEstadoCliente(cliente);
+
+    if (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') {
+      showError('No se puede editar un cliente inactivo. Primero debe activarlo.');
+      return;
+    }
+
     setEditingCliente(cliente);
     setClienteForm({
       nombre: cliente.nombre || '',
@@ -349,16 +356,16 @@ export function CategoriaDetailPage() {
     setSaving(false);
   };
 
-  // Función para eliminar cliente
   const handleDeleteCliente = async (cliente) => {
-    if (!window.confirm(`¿Estás seguro de que quieres eliminar al cliente "${cliente.nombre} ${cliente.apellido}"? Esta acción no se puede deshacer.`)) {
+    if (!window.confirm(`¿Estás seguro de que quieres eliminar al cliente "${cliente.nombre} ${cliente.apellido}"? El cliente se marcará como inactivo.`)) {
       return;
     }
 
     try {
       setDeletingCliente(cliente.id);
-      await api.eliminarCliente(cliente.id);
-      success('Cliente eliminado exitosamente!');
+      // En lugar de eliminar, cambiamos el estado a inactivo
+      await api.cambiarEstadoCliente(cliente.id, 'inactivo');
+      success('Cliente marcado como inactivo exitosamente!');
       await loadClientes();
     } catch (err) {
       console.error('Error eliminando cliente:', err);
@@ -450,6 +457,12 @@ export function CategoriaDetailPage() {
   };
 
   const handleEditServicio = (servicio) => {
+    const estado = getEstadoServicio(servicio);
+
+    if (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') {
+      showError('No se puede editar un servicio inactivo.');
+      return;
+    }
     setEditingServicio(servicio);
     setServicioForm({
       nombre: servicio.nombre || '',
@@ -949,12 +962,24 @@ export function CategoriaDetailPage() {
                                     variant="secondary"
                                     size="sm"
                                     onClick={() => handleEditServicio(servicio)}
-                                    title="Editar servicio"
-                                    disabled={deletingServicio === servicio.id}
+                                    title={
+                                      estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE'
+                                        ? 'No se puede editar servicios inactivos'
+                                        : 'Editar servicio'
+                                    }
+                                    disabled={
+                                      deletingServicio === servicio.id ||
+                                      estado === 'INACTIVO' ||
+                                      estado === 'INACTIVA' ||
+                                      estado === '0' ||
+                                      estado === 'FALSE'
+                                    }
                                     style={{
                                       padding: '0.2rem 0.5rem',
                                       fontSize: '0.75rem',
-                                      minWidth: 'auto'
+                                      minWidth: 'auto',
+                                      opacity: (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') ? 0.5 : 1,
+                                      cursor: (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') ? 'not-allowed' : 'pointer'
                                     }}
                                   >
                                     <i className="bi bi-pencil"></i>
@@ -980,19 +1005,6 @@ export function CategoriaDetailPage() {
                                 </div>
                               </td>
                               <td>
-                                <Button
-                                  variant="link"
-                                  size="sm"
-                                  onClick={() => handleVerTarifas(servicio)}
-                                  style={{
-                                    color: '#F74780',
-                                    textDecoration: 'none',
-                                    padding: '0.2rem 0.4rem',
-                                    fontSize: '0.75rem'
-                                  }}
-                                >
-                                  <i className="bi bi-currency-dollar"></i>
-                                </Button>
                               </td>
                             </>
                           )}
@@ -1206,16 +1218,29 @@ export function CategoriaDetailPage() {
                                 variant="secondary"
                                 size="sm"
                                 onClick={() => handleEditCliente(cliente)}
-                                title="Editar cliente"
-                                disabled={deletingCliente === cliente.id || changingClienteState === cliente.id}
+                                title={
+                                  estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE'
+                                    ? 'No se puede editar clientes inactivos'
+                                    : 'Editar cliente'
+                                }
+                                disabled={
+                                  deletingCliente === cliente.id ||
+                                  changingClienteState === cliente.id ||
+                                  estado === 'INACTIVO' ||
+                                  estado === 'INACTIVA' ||
+                                  estado === '0' ||
+                                  estado === 'FALSE'
+                                }
                                 style={{
                                   padding: '0.2rem 0.5rem',
                                   fontSize: '0.75rem',
-                                  minWidth: 'auto'
+                                  minWidth: 'auto',
+                                  opacity: (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') ? 0.5 : 1,
+                                  cursor: (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') ? 'not-allowed' : 'pointer'
                                 }}
                               >
                                 <i className="bi bi-pencil"></i>
-                              </Button>
+                              </Button>{/*
                               <Button
                                 variant="danger"
                                 size="sm"
@@ -1233,7 +1258,7 @@ export function CategoriaDetailPage() {
                                 ) : (
                                   <i className="bi bi-trash"></i>
                                 )}
-                              </Button>
+                              </Button>*/}
                             </div>
                           </td>
                         </tr>

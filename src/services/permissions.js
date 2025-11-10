@@ -17,6 +17,7 @@ export const PERMISSIONS = {
   VIEW_CATEGORIAS: ['Administrador', 'Gerente'],
   CREATE_CATEGORIA: ['Administrador', 'Gerente'],
   EDIT_CATEGORIA: ['Administrador', 'Gerente'],
+  DELETE_CATEGORIA: ['Administrador', 'Gerente'],
 
   VIEW_SERVICIOS: ['Administrador', 'Gerente', 'Empleado'],
   CREATE_SERVICIO: ['Administrador', 'Gerente'],

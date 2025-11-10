@@ -406,25 +406,6 @@ export function ServiciosPage() {
                         </div>
                       </td>
                     )}
-
-                    {/* TARIFAS */}
-                    {can('EDIT_SERVICIO') && (
-                      <td>
-                        <Button
-                          variant="link"
-                          size="sm"
-                          onClick={() => {/* Función para ver tarifas */ }}
-                          style={{
-                            color: '#F74780',
-                            textDecoration: 'none',
-                            padding: '0.2rem 0.4rem',
-                            fontSize: '0.75rem'
-                          }}
-                        >
-                          <i className="bi bi-currency-dollar"></i>
-                        </Button>
-                      </td>
-                    )}
                   </tr>
                 );
               })}

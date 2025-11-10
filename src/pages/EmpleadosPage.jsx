@@ -69,6 +69,7 @@ export function EmpleadosPage() {
   const [changingPassword, setChangingPassword] = useState(null);
   const [roles, setRoles] = useState([]);
   const [categorias, setCategorias] = useState([]);
+  const [searchEmpleado, setSearchEmpleado] = useState(''); // Estado para la búsqueda
   const [formData, setFormData] = useState({
     nombre: '',
     apellido: '',
@@ -140,6 +141,14 @@ export function EmpleadosPage() {
     setLoading(false);
   };
 
+  // Filtrar empleados basado en la búsqueda
+  const empleadosFiltrados = empleados.filter(empleado =>
+    empleado.nombre.toLowerCase().includes(searchEmpleado.toLowerCase()) ||
+    empleado.apellido.toLowerCase().includes(searchEmpleado.toLowerCase()) ||
+    empleado.documento.includes(searchEmpleado) ||
+    empleado.email.toLowerCase().includes(searchEmpleado.toLowerCase())
+  );
+
   const formatFecha = (fechaString) => {
     if (!fechaString) return '-';
 
@@ -185,7 +194,7 @@ export function EmpleadosPage() {
       };
 
       await api.crearUsuario(dataToSend);
-      
+
       success('¡Empleado creado exitosamente!', 'El empleado ha sido registrado en el sistema');
       logger.success('Empleado creado', formData.nombre);
 
@@ -209,10 +218,15 @@ export function EmpleadosPage() {
   };
 
   const handleEdit = (empleado) => {
+    if (empleado.estado === 0) {
+      showError('No se puede editar la información de un empleado inactivo. Active primero al empleado para poder editarlo.');
+      return;
+    }
+
     const categoriasIds = Array.isArray(empleado.categorias)
       ? empleado.categorias
-          .map(cat => cat?.id || null)
-          .filter(Boolean)
+        .map(cat => cat?.id || null)
+        .filter(Boolean)
       : [];
 
     setEditingEmpleado(empleado);
@@ -252,7 +266,7 @@ export function EmpleadosPage() {
       };
 
       await api.actualizarUsuario(editingEmpleado.id, dataToSend);
-      
+
       success('¡Empleado actualizado exitosamente!', 'Los cambios han sido guardados correctamente');
       logger.success('Empleado actualizado', formData.nombre);
 
@@ -289,13 +303,13 @@ export function EmpleadosPage() {
     setChangingState(empleado.id);
     try {
       await api.cambiarEstadoUsuario(empleado.id, nuevoEstado);
-      
+
       success(
         `¡Empleado ${accionTexto} exitosamente!`,
         `El empleado ha sido ${accionTexto} del sistema`
       );
       logger.success(`Empleado ${accionTexto}`, empleado.nombre);
-      
+
       fetchData();
     } catch (err) {
       logger.error(`Error al ${accion} empleado`, err.message);
@@ -335,7 +349,7 @@ export function EmpleadosPage() {
     setSaving(true);
     try {
       await api.cambiarPasswordUsuario(changingPassword.id, passwordData.nuevaContrasena);
-      
+
       success(
         '¡Contraseña cambiada exitosamente!',
         'La contraseña ha sido actualizada correctamente'
@@ -421,13 +435,38 @@ export function EmpleadosPage() {
       <div>
         <div className="categorias-main-title">
           <h4 style={{ margin: 0 }}>Listado de Empleados</h4>
+          {can('CREATE_EMPLEADO') && (
+            <Button onClick={handleOpenModal}>+ Nuevo Empleado</Button>
+          )}
         </div>
         <p style={{ color: '#6B7280', margin: '0.5rem 0 0 0' }}>
           Total: {empleados.length} empleado{empleados.length !== 1 ? 's' : ''}
+          {searchEmpleado && (
+            <span style={{ marginLeft: '1rem', fontStyle: 'italic' }}>
+              (Filtrados: {empleadosFiltrados.length})
+            </span>
+          )}
         </p>
-        {can('CREATE_EMPLEADO') && (
-          <Button onClick={handleOpenModal}>+ Nuevo Empleado</Button>
-        )}
+
+        {/* Barra de búsqueda - similar a la de clientes */}
+        <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+          <Input
+            placeholder="Buscar por nombre..."
+            value={searchEmpleado}
+            onChange={(e) => setSearchEmpleado(e.target.value)}
+            style={{ flex: 1, maxWidth: '400px' }}
+          />
+          {searchEmpleado && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setSearchEmpleado('')}
+              style={{ padding: '0.5rem 1rem' }}
+            >
+              Limpiar
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Modal para CREAR empleado */}
@@ -666,7 +705,7 @@ export function EmpleadosPage() {
       <div className="table-container">
         {loading ? (
           <Loading />
-        ) : empleados.length > 0 ? (
+        ) : empleadosFiltrados.length > 0 ? (
           <table className="data-table">
             <thead>
               <tr>
@@ -682,7 +721,7 @@ export function EmpleadosPage() {
               </tr>
             </thead>
             <tbody>
-              {empleados.map(empleado => {
+              {empleadosFiltrados.map(empleado => {
                 const estadoInfo = getEstadoColor(empleado.estado);
                 const categoriasNombres = getNombresCategorias(empleado);
 
@@ -731,12 +770,14 @@ export function EmpleadosPage() {
                             variant="secondary"
                             size="sm"
                             onClick={() => handleEdit(empleado)}
-                            title="Editar empleado"
-                            disabled={changingState === empleado.id}
+                            title={empleado.estado === 0 ? "No se puede editar empleados inactivos" : "Editar empleado"}
+                            disabled={changingState === empleado.id || empleado.estado === 0}
                             style={{
                               padding: '0.2rem 0.5rem',
                               fontSize: '0.75rem',
-                              minWidth: 'auto'
+                              minWidth: 'auto',
+                              opacity: empleado.estado === 0 ? 0.5 : 1,
+                              cursor: empleado.estado === 0 ? 'not-allowed' : 'pointer'
                             }}
                           >
                             <i className="bi bi-pencil"></i>
@@ -782,7 +823,7 @@ export function EmpleadosPage() {
             </tbody>
           </table>
         ) : (
-          <Empty message="No hay empleados registrados" />
+          <Empty message={searchEmpleado ? "No se encontraron empleados que coincidan con la búsqueda" : "No hay empleados registrados"} />
         )}
       </div>
     </MainLayout>
