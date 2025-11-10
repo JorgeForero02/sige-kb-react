@@ -87,25 +87,25 @@ class APIClient {
   }
 
   async actualizarUsuario(id, datos) {
-  return this.request(`/usuarios/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(datos),
-  });
-}
+    return this.request(`/usuarios/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(datos),
+    });
+  }
 
-async cambiarEstadoUsuario(id, estado) {
-  return this.request(`/usuarios/${id}/estado`, {
-    method: 'PATCH',
-    body: JSON.stringify({ estado }),
-  });
-}
+  async cambiarEstadoUsuario(id, estado) {
+    return this.request(`/usuarios/${id}/estado`, {
+      method: 'PATCH',
+      body: JSON.stringify({ estado }),
+    });
+  }
 
-async cambiarPasswordUsuario(id, nuevaContrasena) {
-  return this.request(`/usuarios/${id}/password`, {
-    method: 'PATCH',
-    body: JSON.stringify({ nueva_contrasena: nuevaContrasena }),
-  });
-}
+  async cambiarPasswordUsuario(id, nuevaContrasena) {
+    return this.request(`/usuarios/${id}/password`, {
+      method: 'PATCH',
+      body: JSON.stringify({ nueva_contrasena: nuevaContrasena }),
+    });
+  }
 
   // CATEGORIAS
   async getCategorias(params = '') {
@@ -244,8 +244,15 @@ async cambiarPasswordUsuario(id, nuevaContrasena) {
   }
 
   async getCategoriasEgreso() {
-  return this.request('/categorias-egreso', { method: 'GET' });
-}
+    return this.request('/categorias-egreso', { method: 'GET' });
+  }
+
+  async crearCategoriaEgreso(datos) {
+    return this.request('/categorias-egreso', {
+      method: 'POST',
+      body: JSON.stringify(datos),
+    });
+  }
 
   // ROLES
   async getRoles(params = '') {
