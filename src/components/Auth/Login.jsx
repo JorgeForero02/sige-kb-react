@@ -7,6 +7,7 @@ import logo from '../../assets/logoIcono.png';
 export function Login() {
   const [documento, setDocumento] = useState('');
   const [contrasena, setContrasena] = useState('');
+  const [mostrarContrasena, setMostrarContrasena] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -25,6 +26,10 @@ export function Login() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleMostrarContrasena = () => {
+    setMostrarContrasena(!mostrarContrasena);
   };
 
   return (
@@ -59,17 +64,28 @@ export function Login() {
               />
             </div>
 
-            <div className="form-group">
+            <div className="form-group password-group">
               <label>Contraseña</label>
-              <input
-                type="password"
-                value={contrasena}
-                onChange={(e) => setContrasena(e.target.value)}
-                placeholder="Ingresa tu contrasena"
-                required
-                disabled={loading}
-                className="form-control"
-              />
+              <div className="password-input-container">
+                <input
+                  type={mostrarContrasena ? "text" : "password"}
+                  value={contrasena}
+                  onChange={(e) => setContrasena(e.target.value)}
+                  placeholder="Ingresa tu contraseña"
+                  required
+                  disabled={loading}
+                  className="form-control password-input"
+                />
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  onClick={toggleMostrarContrasena}
+                  disabled={loading}
+                  aria-label={mostrarContrasena ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  <i className={`bi ${mostrarContrasena ? 'bi-eye' : 'bi-eye-slash'}`}></i>
+                </button>
+              </div>
             </div>
 
             <button
@@ -83,7 +99,7 @@ export function Login() {
 
           <div className="login-footer">
             <small>
-              Demo: usuario: <strong>admin</strong> | contrasena: <strong>admin123</strong>
+              Demo: usuario: <strong>admin</strong> | contraseña: <strong>admin123</strong>
             </small>
           </div>
         </div>

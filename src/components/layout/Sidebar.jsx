@@ -13,9 +13,17 @@ export function Sidebar() {
 
   const { categorias, categoriasOpen, setCategoriasOpen } = useCategorias();
 
+  // DEBUG: Ver qué contiene el usuario
+  useEffect(() => {
+    console.log('🔍 DEBUG User object:', user);
+    console.log('🔍 DEBUG User rol:', user?.rol);
+    console.log('🔍 DEBUG User rolInfo:', user?.rolInfo);
+    console.log('🔍 DEBUG User rolInfo nombre:', user?.rolInfo?.nombre);
+  }, [user]);
+
   const categoriasActivas = categorias.filter(categoria => {
     const estado = categoria.estado?.toString().toUpperCase();
-    return  estado === '1';
+    return estado === '1';
   });
 
   useEffect(() => {
@@ -29,10 +37,28 @@ export function Sidebar() {
     navigate('/login');
   };
 
-  const rol = user?.rol || user?.rolInfo?.nombre || 'Gerente';
-  const rolString = typeof rol === 'string' ? rol : String(rol);
+  // DEBUG: Ver qué valores estamos obteniendo
+  const rol = user?.rol || user?.rolInfo?.nombre || null;
+  const rolString = rol ? (typeof rol === 'string' ? rol : String(rol)) : null;
+
+  console.log('🔍 DEBUG Final rolString:', rolString);
 
   const getSidebarTitle = () => {
+    // Si no hay usuario, mostrar título genérico
+    if (!rolString) {
+      return (
+        <div className="sidebar-user-info">
+          <i className="bi bi-person-circle user-icon"></i>
+          <div className="sidebar-user">
+            <div className="sidebar-user">Cargando...</div>
+          </div>
+        </div>
+      );
+    }
+
+    // DEBUG: Ver qué rol está llegando aquí
+    console.log('🔍 DEBUG En getSidebarTitle, rolString:', rolString);
+
     switch (rolString) {
       case 'Administrador':
       case 'Admin':
@@ -69,7 +95,7 @@ export function Sidebar() {
         return (
           <div className="sidebar-user-info">
             <i className="bi bi-person-circle user-icon"></i>
-            <div className="user-text">
+            <div className="sidebar-user">
               <div className="sidebar-user">Panel de Control</div>
             </div>
           </div>
@@ -87,6 +113,13 @@ export function Sidebar() {
   };
 
   const getMenuByRole = () => {
+    // Si no hay usuario, no mostrar menú
+    if (!rolString) {
+      return [];
+    }
+
+    console.log('🔍 DEBUG En getMenuByRole, rolString:', rolString);
+
     const base = { path: '/home', icon: 'bi-house-door-fill', label: 'Dashboard' };
 
     // Administrador solo ve Dashboard y Seguridad
@@ -117,7 +150,7 @@ export function Sidebar() {
           icon: 'bi-tags-fill',
           isOpen: categoriasOpen,
           onClick: handleCategoriasClick,
-          mainPath: '/categorias', 
+          mainPath: '/categorias',
           subItems: categoriasActivas.map(categoria => ({
             path: `/categorias/${encodeURIComponent(categoria.nombre)}`,
             icon: 'bi-folder',
@@ -129,32 +162,28 @@ export function Sidebar() {
           }))
         },
         { path: '/empleados', icon: 'bi-person-badge-fill', label: 'Empleados' },
-        { path: '/caja', icon: 'bi-cash-coin', label: 'Caja' }
+        { path: '/caja', icon: 'bi-cash-coin', label: 'Caja' },
+        {path: '/nomina', icon: 'bi-journal-text', label: 'Nómina' }
       ];
     }
 
+    // Empleado - Solo servicios y agenda (sin dashboard)
     if (rolString === 'Empleado') {
       return [
-        base,
+        base,{
+          path: '/servicios-empleado',
+          icon: 'bi-scissors',
+          label: 'Servicios'
+        },
         {
-          type: 'dropdown',
-          label: 'Categorías',
-          icon: 'bi-tags-fill',
-          isOpen: categoriasOpen,
-          onClick: handleCategoriasClick,
-          subItems: categoriasActivas.map(categoria => ({
-            path: `/categorias/${encodeURIComponent(categoria.nombre)}`,
-            icon: 'bi-folder',
-            label: categoria.nombre,
-            state: {
-              categoriaId: categoria.id,
-              categoriaNombre: categoria.nombre
-            },
-          }))
+          path: '/agenda-empleado',
+          icon: 'bi-calendar-check',
+          label: 'Agenda'
         }
       ];
     }
 
+    // Para cualquier otro rol no especificado, mostrar menú básico
     return [
       base,
       {
@@ -210,58 +239,67 @@ export function Sidebar() {
         </div>
 
         <nav className="sidebar-nav">
-          {menuItems.map(item => {
-            if (item.type === 'dropdown') {
-              return (
-                <div key={item.label} className="sidebar-dropdown">
-                  <button
-                    className={`sidebar-dropdown-toggle ${
-                      isCategoriasActive() ? 'active' : ''
-                    } ${item.isOpen ? 'active' : ''}`}
-                    onClick={item.onClick}
-                  >
-                    <i className={`bi ${item.icon}`}></i>
-                    <span>{item.label}</span>
-                    <i className={`bi ${item.isOpen ? 'bi-chevron-up' : 'bi-chevron-down'}`}></i>
-                  </button>
-                  
-                  <div className={`sidebar-dropdown-content ${item.isOpen ? 'show' : ''}`}>
-                    {item.subItems.map((subItem, index) => {
-                      return (
-                        <Link
-                          key={subItem.path}
-                          to={subItem.path}
-                          state={subItem.state}
-                          className={`sidebar-subitem ${isSubItemActive(subItem.path) ? 'active' : ''}`}
-                          onClick={() => window.innerWidth < 768 && setIsOpen(false)}
-                        >
-                          <span>{subItem.label}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            }
+          {menuItems.length > 0 ? (
+            menuItems.map(item => {
+              if (item.type === 'dropdown') {
+                return (
+                  <div key={item.label} className="sidebar-dropdown">
+                    <button
+                      className={`sidebar-dropdown-toggle ${isCategoriasActive() ? 'active' : ''
+                        } ${item.isOpen ? 'active' : ''}`}
+                      onClick={item.onClick}
+                    >
+                      <i className={`bi ${item.icon}`}></i>
+                      <span>{item.label}</span>
+                      <i className={`bi ${item.isOpen ? 'bi-chevron-up' : 'bi-chevron-down'}`}></i>
+                    </button>
 
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={location.pathname === item.path ? 'active' : ''}
-                onClick={() => window.innerWidth < 768 && setIsOpen(false)}
-              >
-                <i className={`bi ${item.icon}`}></i>
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
+                    <div className={`sidebar-dropdown-content ${item.isOpen ? 'show' : ''}`}>
+                      {item.subItems.map((subItem, index) => {
+                        return (
+                          <Link
+                            key={subItem.path}
+                            to={subItem.path}
+                            state={subItem.state}
+                            className={`sidebar-subitem ${isSubItemActive(subItem.path) ? 'active' : ''}`}
+                            onClick={() => window.innerWidth < 768 && setIsOpen(false)}
+                          >
+                            <span>{subItem.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={location.pathname === item.path ? 'active' : ''}
+                  onClick={() => window.innerWidth < 768 && setIsOpen(false)}
+                >
+                  <i className={`bi ${item.icon}`}></i>
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })
+          ) : (
+            // Mostrar mensaje de carga si no hay menú items
+            <div className="sidebar-loading">
+              <i className="bi bi-arrow-repeat spinner"></i>
+              <span>Cargando menú...</span>
+            </div>
+          )}
         </nav>
 
-        <button className="logout-btn" onClick={handleLogout}>
-          <i className="bi bi-box-arrow-right"></i>
-          <span>Cerrar Sesión</span>
-        </button>
+        {user && (
+          <button className="logout-btn" onClick={handleLogout}>
+            <i className="bi bi-box-arrow-right"></i>
+            <span>Cerrar Sesión</span>
+          </button>
+        )}
       </aside>
 
       {isOpen && <div className="overlay" onClick={() => setIsOpen(false)}></div>}

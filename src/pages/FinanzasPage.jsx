@@ -766,9 +766,6 @@ function IngresosTab({
         flexWrap: 'wrap',
         gap: '1rem'
       }}>
-        <Button variant="primary" onClick={onNuevoIngreso}>
-          <i className="bi bi-plus-circle"></i> Nuevo Ingreso
-        </Button>
       </div>
 
       <div style={{

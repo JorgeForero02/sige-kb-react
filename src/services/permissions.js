@@ -23,6 +23,8 @@ export const PERMISSIONS = {
   CREATE_SERVICIO: ['Administrador', 'Gerente'],
   EDIT_SERVICIO: ['Administrador', 'Gerente'],
 
+  VIEW_TARIFAS: ['Administrador', 'Gerente', 'Empleado'],
+
   VIEW_CLIENTES: ['Administrador', 'Gerente', 'Empleado'],
   CREATE_CLIENTE: ['Administrador', 'Gerente', 'Empleado'],
   EDIT_CLIENTE: ['Administrador', 'Gerente'],
@@ -38,7 +40,13 @@ export const PERMISSIONS = {
   VIEW_CAJA: ['Administrador', 'Gerente'],
   CREATE_INGRESO: ['Administrador', 'Gerente'],
   CREATE_EGRESO: ['Administrador', 'Gerente'],
-  CALC_PRENOMINA: ['Administrador', 'Gerente'],
+
+  CALC_NOMINA: ['Administrador', 'Gerente'],
+  VIEW_DETALLES_NOMINA: ['Administrador', 'Gerente'],
+  VIEW_NOMINA: ['Administrador', 'Gerente'],
+
+  CAL_DESCUENTOS_NOMINA: ['Administrador', 'Gerente'],
+  VIEW_DESCUENTOS_NOMINA: ['Administrador', 'Gerente'],
 
   // EMPLEADO: Agenda y historial
   VIEW_MIS_CITAS: ['Administrador', 'Gerente', 'Empleado'],

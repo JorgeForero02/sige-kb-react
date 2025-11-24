@@ -15,6 +15,8 @@ import { CitasPage } from './pages/CitasPage';
 import { FinanzasPage } from './pages/FinanzasPage';
 import { RolesPage } from './pages/RolesPage';
 import { UsuariosPage } from './pages/UsuariosPage';
+import { ServiciosEmpleadoPage } from './pages/ServiciosEmpleadoPage';
+import { NominaPage } from './pages/NominaPage';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 
@@ -27,12 +29,14 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
             <Route path="/empleados" element={<ProtectedRoute><EmpleadosPage /></ProtectedRoute>} />
+            <Route path="/servicios-empleado" element={<ServiciosEmpleadoPage />} />
             <Route path="/categorias" element={<ProtectedRoute><CategoriasPage /></ProtectedRoute>} />
             <Route path="/categorias/:categoriaNombre" element={<ProtectedRoute><CategoriaDetailPage /></ProtectedRoute>} />
             <Route path="/clientes" element={<ProtectedRoute><ClientesPage /></ProtectedRoute>} />
             <Route path="/servicios" element={<ProtectedRoute><ServiciosPage /></ProtectedRoute>} />
             <Route path="/citas" element={<ProtectedRoute><CitasPage /></ProtectedRoute>} />
             <Route path="/caja" element={<ProtectedRoute><FinanzasPage /></ProtectedRoute>} />
+            <Route path="/nomina" element={<ProtectedRoute><NominaPage /></ProtectedRoute>} />
             <Route path="/roles" element={<ProtectedRoute><RolesPage /></ProtectedRoute>} />
             <Route path="/usuarios" element={<ProtectedRoute><UsuariosPage /></ProtectedRoute>} />
             <Route path="/" element={<Navigate to="/login" replace />} />

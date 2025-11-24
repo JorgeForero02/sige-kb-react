@@ -7,11 +7,9 @@ import { useAlert } from '../hooks/useAlert';
 import { useCategorias } from '../context/CategoriasContext';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
-import { logger } from '../services/logger';
 import '../pages/Pages.css';
 import { usePermissions } from '../hooks/usePermissions';
 
-// Componente Modal para formularios
 function Modal({ show, onClose, children }) {
   if (!show) return null;
 
@@ -61,6 +59,656 @@ function Modal({ show, onClose, children }) {
   );
 }
 
+// Agregar el Modal de Tarifas
+function ModalTarifas({ show, onClose, servicio }) {
+  const [tarifasActuales, setTarifasActuales] = useState([]);
+  const [tarifasHistorial, setTarifasHistorial] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const { alert, error: showError } = useAlert();
+
+  useEffect(() => {
+    if (show && servicio) {
+      loadTarifas();
+    }
+  }, [show, servicio]);
+
+  const loadTarifas = async () => {
+    if (!servicio) return;
+
+    setLoading(true);
+    try {
+      const [tarifasActualesRes, tarifasHistorialRes] = await Promise.all([
+        api.getTarifasActuales(servicio.id),
+        api.getTarifasServicio(servicio.id)
+      ]);
+
+      // Mapear la tarifa actual a un array con la estructura esperada
+      const tarifaActualData = tarifasActualesRes.data ? [{
+        id: tarifasActualesRes.data.id,
+        precio: tarifasActualesRes.data.valor,
+        fecha_inicio: tarifasActualesRes.data.fecha_inicio,
+        fecha_fin: tarifasActualesRes.data.fecha_fin,
+        servicio: tarifasActualesRes.data.servicio
+      }] : [];
+
+      // Mapear el historial de tarifas
+      const historialData = tarifasHistorialRes.data?.historial?.map(tarifa => ({
+        id: tarifa.id,
+        precio: tarifa.valor,
+        fecha_inicio: tarifa.fecha_inicio,
+        fecha_fin: tarifa.fecha_fin,
+        servicio: tarifa.servicio
+      })) || [];
+
+      setTarifasActuales(tarifaActualData);
+      setTarifasHistorial(historialData);
+    } catch (err) {
+      showError(err.message || 'Error al cargar las tarifas');
+    }
+    setLoading(false);
+  };
+
+  const formatFecha = (fechaString) => {
+    if (!fechaString) return ' - ';
+    try {
+      const fecha = new Date(fechaString);
+      if (isNaN(fecha.getTime())) return ' - ';
+      return fecha.toLocaleDateString('es-ES');
+    } catch (error) {
+      return ' - ';
+    }
+  };
+
+  const formatMoneda = (valor) => {
+    const numero = parseFloat(valor || 0);
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(numero);
+  };
+
+  if (!show) return null;
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1500
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '12px',
+        padding: '2rem',
+        width: '90%',
+        maxWidth: '800px',
+        maxHeight: '90vh',
+        overflowY: 'auto',
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+        position: 'relative'
+      }}>
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '1rem',
+            right: '1rem',
+            background: 'none',
+            border: 'none',
+            fontSize: '1.5rem',
+            cursor: 'pointer',
+            color: '#666',
+            zIndex: 1001
+          }}
+        >
+          ×
+        </button>
+
+        <div style={{ marginBottom: '1.5rem' }}>
+          <h4 style={{ margin: 0, color: '#1F2937' }}>
+            Tarifas - {servicio?.nombre}
+          </h4>
+        </div>
+
+        {alert && <AlertSimple message={alert.message} type={alert.type} />}
+
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            <Loading />
+            <p style={{ marginTop: '1rem', color: '#6B7280' }}>Cargando tarifas...</p>
+          </div>
+        ) : (
+          <div>
+            {/* Tarifa Actual */}
+            <div style={{ marginBottom: '2rem' }}>
+              <h5 style={{
+                color: '#F74780',
+                marginBottom: '1rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                Tarifa Actual
+              </h5>
+              {tarifasActuales.length > 0 ? (
+                <div style={{
+                  background: '#faeef2ff',
+                  border: '1px solid #FFC1D5',
+                  borderRadius: '8px',
+                  padding: '1rem'
+                }}>
+                  {tarifasActuales.map((tarifa, index) => (
+                    <div key={index} style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '0.5rem 0'
+                    }}>
+                      <div>
+                        <strong style={{ color: '#8A5A6B' }}>
+                          {formatMoneda(tarifa.precio)}
+                        </strong>
+                        <div style={{ fontSize: '0.85rem', color: '#6B7280' }}>
+                          Vigente desde: {formatFecha(tarifa.fecha_inicio)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{
+                  background: '#FEF2F2',
+                  border: '1px solid #FECACA',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  textAlign: 'center',
+                  color: '#DC2626'
+                }}>
+                  <i className="bi bi-exclamation-triangle" style={{ marginRight: '0.5rem' }}></i>
+                  No hay tarifa actual registrada
+                </div>
+              )}
+            </div>
+
+            {/* Historial de Tarifas */}
+            <div>
+              <h5 style={{
+                color: '#F74780',
+                marginBottom: '1rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                Historial de Tarifas
+              </h5>
+              {tarifasHistorial.length > 0 ? (
+                <div style={{
+                  maxHeight: '300px',
+                  overflow: 'auto',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '8px'
+                }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead style={{
+                      background: '#F8FAFC',
+                      position: 'sticky',
+                      top: 0
+                    }}>
+                      <tr>
+                        <th style={{
+                          padding: '0.75rem',
+                          textAlign: 'left',
+                          fontSize: '0.85rem',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '1px solid #E5E7EB'
+                        }}>
+                          Precio
+                        </th>
+                        <th style={{
+                          padding: '0.75rem',
+                          textAlign: 'left',
+                          fontSize: '0.85rem',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '1px solid #E5E7EB'
+                        }}>
+                          Fecha Inicio
+                        </th>
+                        <th style={{
+                          padding: '0.75rem',
+                          textAlign: 'left',
+                          fontSize: '0.85rem',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '1px solid #E5E7EB'
+                        }}>
+                          Fecha Fin
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tarifasHistorial.map((tarifa, index) => (
+                        <tr key={index} style={{
+                          borderBottom: '1px solid #FFC1D5',
+                          background: tarifasActuales.some(t => t.id === tarifa.id) ? '#faeef2ff' : 'white'
+                        }}>
+                          <td style={{
+                            padding: '0.75rem',
+                            fontWeight: tarifasActuales.some(t => t.id === tarifa.id) ? '700' : '500',
+                            color: tarifasActuales.some(t => t.id === tarifa.id) ? '#8A5A6B' : '#374151'
+                          }}>
+                            {formatMoneda(tarifa.precio)}
+                          </td>
+                          <td style={{
+                            padding: '0.75rem',
+                            color: '#6B7280',
+                            fontSize: '0.85rem'
+                          }}>
+                            {formatFecha(tarifa.fecha_inicio)}
+                          </td>
+                          <td style={{
+                            padding: '0.75rem',
+                            color: '#6B7280',
+                            fontSize: '0.85rem'
+                          }}>
+                            {formatFecha(tarifa.fecha_fin)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{
+                  background: '#F3F4F6',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  padding: '2rem',
+                  textAlign: 'center',
+                  color: '#6B7280'
+                }}>
+                  <i className="bi bi-inbox" style={{ fontSize: '2rem', marginBottom: '1rem', display: 'block' }}></i>
+                  No hay historial de tarifas
+                </div>
+              )}
+            </div>
+
+            <div style={{
+              marginTop: '2rem',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              borderTop: '1px solid #F3F4F6',
+              paddingTop: '1rem'
+            }}>
+              <Button variant="primary" onClick={onClose}>
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ModalConfirmacion({ show, onClose, onConfirm, cita }) {
+  if (!show) return null;
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 2000
+    }}>
+      <div style={{
+        background: '#FFE0EA',
+        borderRadius: '16px',
+        border: '2px solid #f74780',
+        padding: '2rem',
+        width: '90%',
+        maxWidth: '400px',
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+        position: 'relative'
+      }}>
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '1rem',
+            right: '1rem',
+            background: 'none',
+            border: 'none',
+            fontSize: '1.5rem',
+            cursor: 'pointer',
+            color: '#0f0f0fff',
+            width: '30px',
+            height: '30px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '50%',
+            transition: 'all 0.3s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = '#fee2e2';
+            e.target.style.color = '#ef4444';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = 'none';
+            e.target.style.color = '#666';
+          }}
+        >
+          ×
+        </button>
+
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <h4 style={{
+            margin: '0 0 0.8rem',
+            color: '#f74780',
+            fontSize: '1.3rem',
+            fontWeight: '700',
+            letterSpacing: '-0.5px'
+          }}>
+            Confirmar Cita
+          </h4>
+          <p style={{
+            color: '#0e0e0eff',
+            margin: 0,
+            lineHeight: '1.5',
+            fontSize: '0.95rem'
+          }}>
+            ¿Está seguro que desea confirmar la cita de <strong>{cita?.clienteInfo?.nombre} {cita?.clienteInfo?.apellido}</strong>?
+          </p>
+        </div>
+
+        <div style={{
+          display: 'flex',
+          gap: '1rem',
+          justifyContent: 'center'
+        }}>
+          <Button
+            variant="primary"
+            onClick={onConfirm}
+            style={{
+              minWidth: '120px',
+              background: 'linear-gradient(135deg, #F74780 0%, #8A5A6B 100%)',
+              border: 'none',
+              borderRadius: '25px',
+              fontWeight: '600',
+              padding: '0.8rem 1.5rem',
+              fontSize: '0.9rem'
+            }}
+          >
+            Confirmar
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={onClose}
+            style={{
+              minWidth: '120px',
+              background: 'white',
+              border: '2px solid #e5e7eb',
+              borderRadius: '25px',
+              fontWeight: '600',
+              padding: '0.8rem 1.5rem',
+              fontSize: '0.9rem',
+              color: '#6b7280'
+            }}
+          >
+            Cancelar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ModalIngreso({ show, onClose, cita, onSuccess }) {
+  const [formData, setFormData] = useState({
+    valor: '',
+    extra: '',
+    medio_pago: 'Efectivo',
+    nota: ''
+  });
+  const [saving, setSaving] = useState(false);
+  const { alert, success, error: showError } = useAlert();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!formData.valor) {
+      showError('El valor es requerido');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await api.crearIngreso({
+        fecha: new Date().toISOString().slice(0, 10),
+        servicio: cita.servicio,
+        empleado: cita.encargado,
+        valor: parseFloat(formData.valor),
+        extra: parseFloat(formData.extra || 0),
+        medio_pago: formData.medio_pago,
+        nota: formData.nota || null
+      });
+
+      success('Ingreso registrado exitosamente!');
+      setFormData({
+        valor: '',
+        extra: '',
+        medio_pago: 'Efectivo',
+        nota: ''
+      });
+      onSuccess();
+      onClose();
+    } catch (err) {
+      showError(err.message || 'Error al registrar ingreso');
+    }
+    setSaving(false);
+  };
+
+  const handleClose = () => {
+    setFormData({
+      valor: '',
+      extra: '',
+      medio_pago: 'Efectivo',
+      nota: ''
+    });
+    onClose();
+  };
+
+  if (!show) return null;
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1500
+    }}>
+      <div className="card-component" style={{
+        width: '90%',
+        maxWidth: '500px',
+        maxHeight: '90vh',
+        display: 'flex',
+        flexDirection: 'column',
+        margin: '1rem',
+        borderRadius: '16px',
+        overflow: 'hidden',
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)'
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '1.5rem 2rem',
+          borderBottom: '2px solid var(--border)',
+          flexShrink: 0,
+          background: 'linear-gradient(135deg, #F9F5FF 0%, #FCE7F3 100%)'
+        }}>
+          <h4 style={{
+            margin: 0,
+            fontWeight: '700',
+            color: 'var(--dark)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            Registrar Ingreso
+          </h4>
+          <button
+            onClick={handleClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '1.5rem',
+              cursor: 'pointer',
+              color: 'var(--gray)',
+              padding: 0,
+              width: '30px',
+              height: '30px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = '#fee2e2';
+              e.target.style.color = '#ef4444';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'none';
+              e.target.style.color = 'var(--gray)';
+            }}
+          >
+            ×
+          </button>
+        </div>
+
+        <div style={{
+          padding: '1.5rem 2rem',
+          background: '#f8f9fa',
+          borderBottom: '1px solid var(--border)'
+        }}>
+          <h5 style={{
+            margin: '0 0 0.8rem',
+            color: 'var(--dark)',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            Información de la Cita
+          </h5>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '0.8rem',
+            fontSize: '0.9rem'
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <strong style={{ color: '#6b7280', fontSize: '0.8rem' }}>Cliente:</strong>
+              <span>{cita?.clienteInfo?.nombre} {cita?.clienteInfo?.apellido}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <strong style={{ color: '#6b7280', fontSize: '0.8rem' }}>Empleado:</strong>
+              <span>{cita?.encargadoInfo?.nombre}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <strong style={{ color: '#6b7280', fontSize: '0.8rem' }}>Servicio:</strong>
+              <span>{cita?.servicioInfo?.nombre}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <strong style={{ color: '#6b7280', fontSize: '0.8rem' }}>Duración:</strong>
+              <span>{cita?.duracion} min</span>
+            </div>
+          </div>
+        </div>
+
+        <div style={{
+          padding: '2rem',
+          overflowY: 'auto',
+          flex: 1
+        }}>
+          {alert && <AlertSimple message={alert.message} type={alert.type} />}
+
+          <form onSubmit={handleSubmit} className="form-layout">
+            <Input
+              label="Valor *"
+              type="number"
+              value={formData.valor}
+              onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
+              min="0"
+              step="0.01"
+              required
+              autoFocus
+            />
+            <Input
+              label="Extra"
+              type="number"
+              value={formData.extra}
+              onChange={(e) => setFormData({ ...formData, extra: e.target.value })}
+              min="0"
+              step="0.01"
+            />
+            <Select
+              label="Medio de Pago *"
+              value={formData.medio_pago}
+              onChange={(e) => setFormData({ ...formData, medio_pago: e.target.value })}
+              options={[
+                { id: 'Efectivo', nombre: 'Efectivo' },
+                { id: 'Tarjeta', nombre: 'Tarjeta' },
+                { id: 'Transferencia', nombre: 'Transferencia' },
+                { id: 'Bizum', nombre: 'Bizum' }
+              ]}
+              required
+            />
+            <div style={{ gridColumn: '1 / -1' }}>
+              <Input
+                label="Nota"
+                type="text"
+                value={formData.nota}
+                onChange={(e) => setFormData({ ...formData, nota: e.target.value })}
+                placeholder="Observaciones adicionales..."
+              />
+            </div>
+            <div className="form-actions">
+              <Button variant="primary" disabled={saving}>
+                {saving ? 'Registrando...' : 'Registrar Ingreso'}
+              </Button>
+              <Button variant="secondary" onClick={handleClose}>
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function CategoriaDetailPage() {
   const { categoriaNombre } = useParams();
   const navigate = useNavigate();
@@ -68,6 +716,7 @@ export function CategoriaDetailPage() {
   const { user } = useAuth();
   const { can } = usePermissions();
   const [activeTab, setActiveTab] = useState('servicios');
+
   const [editingServicio, setEditingServicio] = useState(null);
   const [showEditServicioModal, setShowEditServicioModal] = useState(false);
   const [deletingServicio, setDeletingServicio] = useState(null);
@@ -75,8 +724,13 @@ export function CategoriaDetailPage() {
   const [showEditClienteModal, setShowEditClienteModal] = useState(false);
   const [deletingCliente, setDeletingCliente] = useState(null);
   const [changingClienteState, setChangingClienteState] = useState(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showIngresoModal, setShowIngresoModal] = useState(false);
+  const [citaSeleccionada, setCitaSeleccionada] = useState(null);
 
-  // Estados para Servicios
+  const [showTarifasModal, setShowTarifasModal] = useState(false);
+  const [servicioTarifas, setServicioTarifas] = useState(null);
+
   const [servicios, setServicios] = useState([]);
   const [showServicioModal, setShowServicioModal] = useState(false);
   const [servicioForm, setServicioForm] = useState({
@@ -87,7 +741,6 @@ export function CategoriaDetailPage() {
     porcentaje: ''
   });
 
-  // Estados para Clientes
   const [clientes, setClientes] = useState([]);
   const [showClienteModal, setShowClienteModal] = useState(false);
   const [clienteForm, setClienteForm] = useState({
@@ -98,7 +751,6 @@ export function CategoriaDetailPage() {
     telefono: ''
   });
 
-  // Estados para Agenda
   const [citas, setCitas] = useState([]);
   const [showCitaModal, setShowCitaModal] = useState(false);
   const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
@@ -120,7 +772,18 @@ export function CategoriaDetailPage() {
   const decodedNombre = decodeURIComponent(categoriaNombre || '');
   const categoria = categorias.find(cat => cat.nombre === decodedNombre);
   const isEmpleado = user?.rolInfo?.nombre === 'Empleado';
-  const isGerente = user?.rolInfo?.nombre === 'Gerente';
+
+  const [filtroEstado, setFiltroEstado] = useState('todas');
+  const [showEditCitaModal, setShowEditCitaModal] = useState(false);
+  const [editCitaForm, setEditCitaForm] = useState({
+    fecha: '',
+    hora_inicio: '',
+    duracion: '30',
+    encargado: '',
+    cliente: '',
+    servicio: ''
+  });
+  const [citaEditando, setCitaEditando] = useState(null);
 
   useEffect(() => {
     if (categoria) {
@@ -159,7 +822,6 @@ export function CategoriaDetailPage() {
       setServicios(serviciosCategoria);
 
     } catch (error) {
-      console.error('Error cargando servicios:', error);
       showError('Error al cargar servicios');
     }
     setLoading(false);
@@ -173,7 +835,6 @@ export function CategoriaDetailPage() {
       const clientesRes = await api.getClientes();
       setClientes(clientesRes.data || []);
     } catch (error) {
-      console.error('Error cargando clientes:', error);
       showError('Error al cargar clientes');
     }
     setLoading(false);
@@ -184,8 +845,15 @@ export function CategoriaDetailPage() {
 
     setLoading(true);
     try {
+      let params = `?fecha_inicio=${fecha}&fecha_fin=${fecha}`;
+
+      // Aplicar filtro de estado si no es "todas"
+      if (filtroEstado !== 'todas') {
+        params += `&estado=${filtroEstado}`;
+      }
+
       const [citasRes, empleadosRes, serviciosRes] = await Promise.all([
-        api.getCitas(`?fecha_inicio=${fecha}&fecha_fin=${fecha}`),
+        api.getCitas(params),
         api.getUsuarios(),
         api.getServicios()
       ]);
@@ -214,10 +882,14 @@ export function CategoriaDetailPage() {
       setEmpleados(empleadosRes.data || []);
 
     } catch (error) {
-      console.error('Error cargando citas:', error);
       showError('Error al cargar citas');
     }
     setLoading(false);
+  };
+
+  const handleVerTarifas = (servicio) => {
+    setServicioTarifas(servicio);
+    setShowTarifasModal(true);
   };
 
   const handleCreateServicio = async (e) => {
@@ -228,7 +900,6 @@ export function CategoriaDetailPage() {
       return;
     }
 
-    // Verificar que la duración sea múltiplo de 15
     const duracion = parseInt(servicioForm.duracion);
     if (duracion % 15 !== 0) {
       warning('La duración debe ser múltiplo de 15 minutos (15, 30, 45, 60, 75, 90, etc.)');
@@ -254,7 +925,6 @@ export function CategoriaDetailPage() {
       await loadServicios();
 
     } catch (error) {
-      // Mostrar error más específico
       if (error.message.includes('duracion') || error.message.includes('duraci')) {
         showError('Error en la duración: debe ser múltiplo de 15 minutos');
       } else if (error.message.includes('precio')) {
@@ -291,7 +961,6 @@ export function CategoriaDetailPage() {
       await loadClientes();
 
     } catch (error) {
-      console.error('Error creando cliente:', error);
       showError(error.response?.data?.message || error.message || 'Error al crear cliente');
     }
     setSaving(false);
@@ -316,7 +985,6 @@ export function CategoriaDetailPage() {
     setShowEditClienteModal(true);
   };
 
-  // Función para actualizar cliente
   const handleUpdateCliente = async (e) => {
     e.preventDefault();
 
@@ -350,55 +1018,54 @@ export function CategoriaDetailPage() {
       await loadClientes();
 
     } catch (error) {
-      console.error('Error actualizando cliente:', error);
       showError(error.message || 'Error al actualizar cliente');
     }
     setSaving(false);
   };
 
   const handleDeleteCliente = async (cliente) => {
-    if (!window.confirm(`¿Estás seguro de que quieres eliminar al cliente "${cliente.nombre} ${cliente.apellido}"? El cliente se marcará como inactivo.`)) {
-      return;
-    }
-
-    try {
-      setDeletingCliente(cliente.id);
-      // En lugar de eliminar, cambiamos el estado a inactivo
-      await api.cambiarEstadoCliente(cliente.id, 'inactivo');
-      success('Cliente marcado como inactivo exitosamente!');
-      await loadClientes();
-    } catch (err) {
-      console.error('Error eliminando cliente:', err);
-      showError(err.message || 'Error al eliminar cliente');
-    } finally {
-      setDeletingCliente(null);
-    }
+    showConfirmation(
+      async (clienteData) => {
+        try {
+          setDeletingCliente(clienteData.id);
+          await api.cambiarEstadoCliente(clienteData.id, 'inactivo');
+          success('Cliente marcado como inactivo exitosamente!');
+          await loadClientes();
+        } catch (err) {
+          showError(err.message || 'Error al eliminar cliente');
+        } finally {
+          setDeletingCliente(null);
+        }
+      },
+      cliente,
+      'danger'
+    );
   };
 
-  // Función para cambiar estado del cliente
   const handleToggleEstadoCliente = async (cliente) => {
     const estadoActual = getEstadoCliente(cliente);
     const nuevoEstado = estadoActual === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO';
     const accion = nuevoEstado === 'ACTIVO' ? 'activar' : 'desactivar';
 
-    if (!window.confirm(`¿Estás seguro de que quieres ${accion} al cliente "${cliente.nombre} ${cliente.apellido}"?`)) {
-      return;
-    }
-
-    setChangingClienteState(cliente.id);
-    try {
-      await api.cambiarEstadoCliente(cliente.id, nuevoEstado.toLowerCase());
-      success(`Cliente ${accion}do exitosamente!`);
-      await loadClientes();
-    } catch (err) {
-      console.error(`Error al ${accion} cliente`, err);
-      showError(err.message || `Error al ${accion} cliente`);
-    } finally {
-      setChangingClienteState(null);
-    }
+    showConfirmation(
+      async (clienteData) => {
+        setChangingClienteState(clienteData.id);
+        try {
+          await api.cambiarEstadoCliente(clienteData.id, nuevoEstado.toLowerCase());
+          success(`Cliente ${accion}do exitosamente!`);
+          await loadClientes();
+        } catch (err) {
+          showError(err.message || `Error al ${accion} cliente`);
+        } finally {
+          setChangingClienteState(null);
+        }
+      },
+      cliente,
+      'warning'
+    );
   };
 
-  // Función para cancelar edición de cliente
+
   const handleCancelEditCliente = () => {
     setEditingCliente(null);
     setShowEditClienteModal(false);
@@ -439,11 +1106,75 @@ export function CategoriaDetailPage() {
       }, 500);
 
     } catch (err) {
-      console.error('Error creando cita:', err);
       showError(err.message || 'Error al crear cita');
     }
     setSaving(false);
   };
+
+  const handleEditCita = (cita) => {
+    setCitaEditando(cita);
+    setEditCitaForm({
+      fecha: cita.fecha || fecha,
+      hora_inicio: cita.hora_inicio || '',
+      duracion: cita.duracion?.toString() || '30',
+      encargado: cita.encargado?.toString() || '',
+      cliente: cita.cliente?.toString() || '',
+      servicio: cita.servicio?.toString() || ''
+    });
+    setShowEditCitaModal(true);
+  };
+
+  const handleUpdateCita = async (e) => {
+    e.preventDefault();
+
+    if (!editCitaForm.hora_inicio || !editCitaForm.cliente || !editCitaForm.encargado || !editCitaForm.servicio) {
+      warning('Completa todos los campos requeridos');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Usar la misma estructura que en crear cita
+      const citaData = {
+        fecha: editCitaForm.fecha,
+        hora_inicio: editCitaForm.hora_inicio,
+        duracion: parseInt(editCitaForm.duracion),
+        encargado: parseInt(editCitaForm.encargado),
+        cliente: parseInt(editCitaForm.cliente),
+        servicio: parseInt(editCitaForm.servicio)
+      };
+
+      await api.actualizarCita(citaEditando.id, citaData);
+      success('Cita actualizada exitosamente!');
+
+      setShowEditCitaModal(false);
+      setCitaEditando(null);
+      await loadCitas();
+
+    } catch (err) {
+      // Mostrar el error específico de validación
+      showError(err.message || 'Error de validación al actualizar cita');
+      console.error('Error detallado:', err);
+    }
+    setSaving(false);
+  };
+
+  const handleCancelarCita = async (citaId) => {
+    showConfirmation(
+      async (id) => {
+        try {
+          await api.cancelarCita(id);
+          success('Cita cancelada exitosamente!');
+          await loadCitas();
+        } catch (err) {
+          showError(err.message || 'Error al cancelar cita');
+        }
+      },
+      citaId,
+      'warning'
+    );
+  };
+
 
   const handleCambiarEstadoCita = async (citaId, nuevoEstado) => {
     try {
@@ -451,7 +1182,6 @@ export function CategoriaDetailPage() {
       success(`Cita ${nuevoEstado}`);
       await loadCitas();
     } catch (err) {
-      console.error('Error cambiando estado:', err);
       showError(err.message || 'Error al cambiar estado');
     }
   };
@@ -482,7 +1212,6 @@ export function CategoriaDetailPage() {
       return;
     }
 
-    // Verificar que la duración sea múltiplo de 15
     const duracion = parseInt(servicioForm.duracion);
     if (duracion % 15 !== 0) {
       warning('La duración debe ser múltiplo de 15 minutos (15, 30, 45, 60, etc.)');
@@ -509,28 +1238,28 @@ export function CategoriaDetailPage() {
       await loadServicios();
 
     } catch (error) {
-      console.error('Error actualizando servicio:', error);
       showError(error.message || 'Error al actualizar servicio');
     }
     setSaving(false);
   };
 
   const handleDeleteServicio = async (servicio) => {
-    if (!window.confirm(`¿Estás seguro de que quieres eliminar el servicio "${servicio.nombre}"? Esta acción no se puede deshacer.`)) {
-      return;
-    }
-
-    try {
-      setDeletingServicio(servicio.id);
-      await api.eliminarServicio(servicio.id);
-      success('Servicio eliminado exitosamente!');
-      await loadServicios();
-    } catch (err) {
-      console.error('Error eliminando servicio:', err);
-      showError(err.message || 'Error al eliminar servicio');
-    } finally {
-      setDeletingServicio(null);
-    }
+    showConfirmation(
+      async (servicioData) => {
+        try {
+          setDeletingServicio(servicioData.id);
+          await api.eliminarServicio(servicioData.id);
+          success('Servicio eliminado exitosamente!');
+          await loadServicios();
+        } catch (err) {
+          showError(err.message || 'Error al eliminar servicio');
+        } finally {
+          setDeletingServicio(null);
+        }
+      },
+      servicio,
+      'danger'
+    );
   };
 
   const handleCancelEdit = () => {
@@ -544,22 +1273,19 @@ export function CategoriaDetailPage() {
     const nuevoEstado = estadoActual === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO';
     const accion = nuevoEstado === 'ACTIVO' ? 'activar' : 'desactivar';
 
-    if (!window.confirm(`¿Estás seguro de que quieres ${accion} el servicio "${servicio.nombre}"?`)) {
-      return;
-    }
-
-    try {
-      await api.actualizarServicio(servicio.id, { estado: nuevoEstado.toLowerCase() });
-      success(`Servicio ${accion}do exitosamente!`);
-      loadServicios();
-    } catch (err) {
-      console.error(`Error al ${accion} servicio`, err);
-      showError(err.message || `Error al ${accion} servicio`);
-    }
-  };
-
-  const handleVerTarifas = (servicio) => {
-    warning('Funcionalidad de tarifas en desarrollo');
+    showConfirmation(
+      async (servicioData) => {
+        try {
+          await api.actualizarServicio(servicioData.id, { estado: nuevoEstado.toLowerCase() });
+          success(`Servicio ${accion}do exitosamente!`);
+          loadServicios();
+        } catch (err) {
+          showError(err.message || `Error al ${accion} servicio`);
+        }
+      },
+      servicio,
+      'warning'
+    );
   };
 
   const formatFecha = (fechaString) => {
@@ -635,11 +1361,42 @@ export function CategoriaDetailPage() {
     cliente.documento.includes(searchCliente)
   );
 
+  const citasFiltradas = citas.filter(cita => {
+    if (filtroEstado === 'todas') return true;
+    return cita.estado === filtroEstado;
+  });
+
+  const handleConfirmarCita = (cita) => {
+    setCitaSeleccionada(cita);
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmarCitaDefinitiva = async () => {
+    if (!citaSeleccionada) {
+      showError('No hay cita seleccionada');
+      return;
+    }
+
+    try {
+      await api.cambiarEstadoCita(citaSeleccionada.id, 'confirmada');
+
+      setShowConfirmModal(false);
+
+      success('Cita confirmada exitosamente!');
+
+      setShowIngresoModal(true);
+
+      await loadCitas();
+    } catch (err) {
+      showError(err.message || 'Error al confirmar cita');
+      setShowConfirmModal(false);
+    }
+  };
+
   return (
     <MainLayout title={`${categoria.nombre}`}>
       {alert && <AlertSimple message={alert.message} type={alert.type} />}
 
-      {/* Pestañas */}
       <div style={{ marginBottom: '1.5rem' }}>
         <div style={{
           display: 'flex',
@@ -728,16 +1485,13 @@ export function CategoriaDetailPage() {
         </div>
       </div>
 
-      {/* Contenido de las pestañas */}
       <div style={{ marginTop: '1rem' }}>
 
-        {/*Pestaña de servicios*/}
         {activeTab === 'servicios' && (
           <div>
             <div className="categorias-main-title">
               <h4 style={{ margin: 0 }}>Lista de servicios</h4>
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                {/* SOLO GERENTE PUEDE CREAR SERVICIOS */}
                 {can('CREATE_SERVICIO') && (
                   <div className="categorias-main-title">
                     <Button onClick={() => setShowServicioModal(true)}>
@@ -821,7 +1575,6 @@ export function CategoriaDetailPage() {
               </form>
             </Modal>
 
-            {/* MODAL SOLO PARA QUIEN TIENE PERMISO CREATE_SERVICIO */}
             {can('CREATE_SERVICIO') && (
               <Modal show={showServicioModal} onClose={() => setShowServicioModal(false)}>
                 <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', color: '#333' }}>
@@ -903,9 +1656,8 @@ export function CategoriaDetailPage() {
                       <th>Fecha de Creación</th>
                       <th>Descripción</th>
                       <th>Duración</th>
-                      {/* SOLO QUIEN TIENE PERMISO EDIT_SERVICIO VE ACCIONES */}
                       {can('EDIT_SERVICIO') && <th>Acciones</th>}
-                      {can('EDIT_SERVICIO') && <th>Tarifas</th>}
+                      {can('VIEW_TARIFAS') && <th>Tarifas</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -953,60 +1705,73 @@ export function CategoriaDetailPage() {
                           <td style={{ fontWeight: '500', color: '#374151' }}>
                             {servicio.duracion} minutos
                           </td>
-                          {/* ACCIONES SOLO PARA QUIEN TIENE PERMISO EDIT_SERVICIO */}
                           {can('EDIT_SERVICIO') && (
-                            <>
-                              <td>
-                                <div className="table-actions" style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                                  <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    onClick={() => handleEditServicio(servicio)}
-                                    title={
-                                      estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE'
-                                        ? 'No se puede editar servicios inactivos'
-                                        : 'Editar servicio'
-                                    }
-                                    disabled={
-                                      deletingServicio === servicio.id ||
-                                      estado === 'INACTIVO' ||
-                                      estado === 'INACTIVA' ||
-                                      estado === '0' ||
-                                      estado === 'FALSE'
-                                    }
-                                    style={{
-                                      padding: '0.2rem 0.5rem',
-                                      fontSize: '0.75rem',
-                                      minWidth: 'auto',
-                                      opacity: (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') ? 0.5 : 1,
-                                      cursor: (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') ? 'not-allowed' : 'pointer'
-                                    }}
-                                  >
-                                    <i className="bi bi-pencil"></i>
-                                  </Button>
-                                  <Button
-                                    variant="danger"
-                                    size="sm"
-                                    onClick={() => handleDeleteServicio(servicio)}
-                                    title="Eliminar servicio"
-                                    disabled={deletingServicio === servicio.id}
-                                    style={{
-                                      padding: '0.2rem 0.5rem',
-                                      fontSize: '0.75rem',
-                                      minWidth: 'auto'
-                                    }}
-                                  >
-                                    {deletingServicio === servicio.id ? (
-                                      <i className="bi bi-arrow-repeat"></i>
-                                    ) : (
-                                      <i className="bi bi-trash"></i>
-                                    )}
-                                  </Button>
-                                </div>
-                              </td>
-                              <td>
-                              </td>
-                            </>
+                            <td>
+                              <div className="table-actions" style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => handleEditServicio(servicio)}
+                                  title={
+                                    estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE'
+                                      ? 'No se puede editar servicios inactivos'
+                                      : 'Editar servicio'
+                                  }
+                                  disabled={
+                                    deletingServicio === servicio.id ||
+                                    estado === 'INACTIVO' ||
+                                    estado === 'INACTIVA' ||
+                                    estado === '0' ||
+                                    estado === 'FALSE'
+                                  }
+                                  style={{
+                                    padding: '0.2rem 0.5rem',
+                                    fontSize: '0.75rem',
+                                    minWidth: 'auto',
+                                    opacity: (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') ? 0.5 : 1,
+                                    cursor: (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') ? 'not-allowed' : 'pointer'
+                                  }}
+                                >
+                                  <i className="bi bi-pencil"></i>
+                                </Button>
+                                <Button
+                                  variant="danger"
+                                  size="sm"
+                                  onClick={() => handleDeleteServicio(servicio)}
+                                  title="Eliminar servicio"
+                                  disabled={deletingServicio === servicio.id}
+                                  style={{
+                                    padding: '0.2rem 0.5rem',
+                                    fontSize: '0.75rem',
+                                    minWidth: 'auto'
+                                  }}
+                                >
+                                  {deletingServicio === servicio.id ? (
+                                    <i className="bi bi-arrow-repeat"></i>
+                                  ) : (
+                                    <i className="bi bi-trash"></i>
+                                  )}
+                                </Button>
+                              </div>
+                            </td>
+                          )}
+                          {can('VIEW_TARIFAS') && (
+                            <td>
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={() => handleVerTarifas(servicio)}
+                                title="Ver tarifas"
+                                style={{
+                                  padding: '0.35rem 0.7rem',
+                                  fontSize: '0.75rem',
+                                  minWidth: 'auto',
+                                  height: '32px'
+                                }}
+                              >
+                                Tarifas
+                              </Button>
+                            </td>
                           )}
                         </tr>
                       );
@@ -1020,7 +1785,6 @@ export function CategoriaDetailPage() {
           </div>
         )}
 
-        {/* PESTAÑA CLIENTES */}
         {activeTab === 'clientes' && (
           <div>
             <div className="categorias-main-title">
@@ -1030,7 +1794,6 @@ export function CategoriaDetailPage() {
               </Button>
             </div>
 
-            {/* Modal para EDITAR cliente */}
             <Modal show={showEditClienteModal} onClose={handleCancelEditCliente}>
               <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', color: '#333' }}>
                 Editar Cliente: {editingCliente?.nombre} {editingCliente?.apellido}
@@ -1090,7 +1853,6 @@ export function CategoriaDetailPage() {
               </form>
             </Modal>
 
-            {/* Modal para CREAR cliente (existente) */}
             <Modal show={showClienteModal} onClose={() => setShowClienteModal(false)}>
               <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', color: '#333' }}>
                 Crear Cliente
@@ -1240,25 +2002,7 @@ export function CategoriaDetailPage() {
                                 }}
                               >
                                 <i className="bi bi-pencil"></i>
-                              </Button>{/*
-                              <Button
-                                variant="danger"
-                                size="sm"
-                                onClick={() => handleDeleteCliente(cliente)}
-                                title="Eliminar cliente"
-                                disabled={deletingCliente === cliente.id || changingClienteState === cliente.id}
-                                style={{
-                                  padding: '0.2rem 0.5rem',
-                                  fontSize: '0.75rem',
-                                  minWidth: 'auto'
-                                }}
-                              >
-                                {deletingCliente === cliente.id ? (
-                                  <i className="bi bi-arrow-repeat"></i>
-                                ) : (
-                                  <i className="bi bi-trash"></i>
-                                )}
-                              </Button>*/}
+                              </Button>
                             </div>
                           </td>
                         </tr>
@@ -1273,7 +2017,6 @@ export function CategoriaDetailPage() {
           </div>
         )}
 
-        {/* PESTAÑA AGENDA */}
         {activeTab === 'agenda' && (
           <div>
             <div className="categorias-main-title">
@@ -1284,12 +2027,35 @@ export function CategoriaDetailPage() {
                 </Button>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+
+            {/* Filtros de Agenda */}
+            <div style={{
+              display: 'flex',
+              gap: '1rem',
+              alignItems: 'center',
+              marginBottom: '1.5rem',
+              flexWrap: 'wrap'
+            }}>
               <Input
                 type="date"
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
+                style={{ width: '200px' }}
               />
+
+              <Select
+                value={filtroEstado}
+                onChange={(e) => setFiltroEstado(e.target.value)}
+                style={{ width: '200px' }}
+                options={[
+                  { id: 'todas', nombre: 'Todas las citas' },
+                  { id: 'pendiente', nombre: 'Pendientes' },
+                  { id: 'confirmada', nombre: 'Confirmadas' },
+                  { id: 'completada', nombre: 'Completadas' },
+                  { id: 'cancelada', nombre: 'Canceladas' }
+                ]}
+              />
+
             </div>
 
             <Modal show={showCitaModal} onClose={() => setShowCitaModal(false)}>
@@ -1360,14 +2126,79 @@ export function CategoriaDetailPage() {
               </form>
             </Modal>
 
+            {/* Modal para Editar Cita */}
+            <Modal show={showEditCitaModal} onClose={() => setShowEditCitaModal(false)}>
+              <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', color: '#333' }}>
+                Editar Cita
+              </h4>
+              <form onSubmit={handleUpdateCita} className="form-layout">
+                <Input
+                  label="Fecha *"
+                  type="date"
+                  value={editCitaForm.fecha}
+                  onChange={(e) => setEditCitaForm({ ...editCitaForm, fecha: e.target.value })}
+                  required
+                />
+                <Input
+                  label="Hora *"
+                  type="time"
+                  value={editCitaForm.hora_inicio}
+                  onChange={(e) => setEditCitaForm({ ...editCitaForm, hora_inicio: e.target.value })}
+                  required
+                />
+                <Select
+                  label="Servicio *"
+                  value={editCitaForm.servicio}
+                  onChange={(e) => setEditCitaForm({ ...editCitaForm, servicio: e.target.value })}
+                  options={servicios}
+                  required
+                />
+                <Input
+                  label="Duración (minutos) *"
+                  type="number"
+                  value={editCitaForm.duracion}
+                  onChange={(e) => setEditCitaForm({ ...editCitaForm, duracion: e.target.value })}
+                  min="15"
+                  step="15"
+                  required
+                />
+                <Select
+                  label="Cliente *"
+                  value={editCitaForm.cliente}
+                  onChange={(e) => setEditCitaForm({ ...editCitaForm, cliente: e.target.value })}
+                  options={clientes}
+                  required
+                />
+                <Select
+                  label="Empleado *"
+                  value={editCitaForm.encargado}
+                  onChange={(e) => setEditCitaForm({ ...editCitaForm, encargado: e.target.value })}
+                  options={empleados}
+                  required
+                  disabled={isEmpleado}
+                />
+                <div className="form-actions">
+                  <Button variant="primary" disabled={saving}>
+                    {saving ? 'Actualizando...' : 'Actualizar Cita'}
+                  </Button>
+                  <Button variant="secondary" onClick={() => setShowEditCitaModal(false)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </form>
+            </Modal>
+
             <div className="citas-grid" style={{ marginTop: '1.5rem' }}>
               {loading ? (
                 <Loading />
-              ) : citas.length > 0 ? (
-                citas.map(cita => (
+              ) : citasFiltradas.length > 0 ? (
+                citasFiltradas.map(cita => (
                   <Card key={cita.id} className="cita-card">
                     <div className="cita-card-header">
                       <div>
+                        <div className="cita-hora">
+                          <i className="bi bi-calendar"></i> {formatFecha(cita.fecha)}
+                        </div>
                         <div className="cita-hora">
                           <i className="bi bi-clock-history"></i> {cita.hora_inicio} - {cita.hora_fin}
                         </div>
@@ -1385,34 +2216,90 @@ export function CategoriaDetailPage() {
                       <p><i className="bi bi-telephone"></i> {cita.clienteInfo?.telefono || 'Sin teléfono'}</p>
                       <p><i className="bi bi-hourglass-split"></i> {cita.duracion} minutos</p>
                     </div>
-                    {cita.estado !== 'completada' && cita.estado !== 'cancelada' && (
-                      <div className="cita-card-actions">
-                        {(!cita.estado || cita.estado === 'pendiente') && (
-                          <Button onClick={() => handleCambiarEstadoCita(cita.id, 'confirmada')} variant="primary" size="sm">
-                            <i className="bi bi-check-circle"></i> Confirmar
-                          </Button>
-                        )}
-                        {cita.estado === 'confirmada' && (
-                          <Button onClick={() => handleCambiarEstadoCita(cita.id, 'completada')} variant="success" size="sm">
-                            <i className="bi bi-check2-circle"></i> Completar
-                          </Button>
-                        )}
-                        {(!cita.estado || cita.estado === 'pendiente' || cita.estado === 'confirmada') && (
-                          <Button onClick={() => handleCambiarEstadoCita(cita.id, 'cancelada')} variant="secondary" size="sm">
-                            <i className="bi bi-x-circle"></i> Cancelar
-                          </Button>
-                        )}
-                      </div>
-                    )}
+                    <div className="cita-card-actions">
+                      {/* Botón Editar - solo para citas pendientes o confirmadas */}
+                      {(cita.estado === 'pendiente' || cita.estado === 'confirmada') && (
+                        <Button
+                          onClick={() => handleEditCita(cita)}
+                          variant="secondary"
+                          size="sm"
+                          title="Editar cita"
+                        >
+                          <i className="bi bi-pencil"></i> Editar
+                        </Button>
+                      )}
+
+                      {/* Botones de estado */}
+                      {cita.estado === 'pendiente' && (
+                        <Button
+                          onClick={() => handleConfirmarCita(cita)}
+                          variant="primary"
+                          size="sm"
+                        >
+                          <i className="bi bi-check-circle"></i> Confirmar
+                        </Button>
+                      )}
+
+                      {cita.estado === 'confirmada' && (
+                        <Button
+                          onClick={() => handleCambiarEstadoCita(cita.id, 'completada')}
+                          variant="success"
+                          size="sm"
+                        >
+                          <i className="bi bi-check2-all"></i> Completar
+                        </Button>
+                      )}
+
+                      {/* Botón Cancelar - para citas pendientes o confirmadas */}
+                      {(cita.estado === 'pendiente' || cita.estado === 'confirmada') && (
+                        <Button
+                          onClick={() => handleCancelarCita(cita.id)}
+                          variant="danger"
+                          size="sm"
+                        >
+                          <i className="bi bi-x-circle"></i> Cancelar
+                        </Button>
+                      )}
+                    </div>
                   </Card>
                 ))
               ) : (
-                <Empty message={`No hay citas para ${fecha} en ${categoria.nombre}`} />
+                <Empty message={`No hay citas para los filtros seleccionados`} />
               )}
             </div>
           </div>
         )}
       </div>
+
+      <ModalTarifas
+        show={showTarifasModal}
+        onClose={() => {
+          setShowTarifasModal(false);
+          setServicioTarifas(null);
+        }}
+        servicio={servicioTarifas}
+      />
+
+      <ModalConfirmacion
+        show={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={handleConfirmarCitaDefinitiva}
+        cita={citaSeleccionada}
+      />
+
+      <ModalIngreso
+        show={showIngresoModal}
+        onClose={() => {
+          setShowIngresoModal(false);
+          setCitaSeleccionada(null);
+        }}
+        cita={citaSeleccionada}
+        onSuccess={() => {
+          setShowIngresoModal(false);
+          setCitaSeleccionada(null);
+          loadCitas();
+        }}
+      />
     </MainLayout>
   );
 }

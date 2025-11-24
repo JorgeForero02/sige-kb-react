@@ -158,6 +158,23 @@ class APIClient {
     });
   }
 
+  //TARIFAS
+  async getTarifas(params = '') {
+    return this.request(`/historial-tarifas${params}`, { method: 'GET' });
+  }
+
+  async getTarifasResumen(params = '') {
+    return this.request(`/historial-tarifas/resumen${params}`, { method: 'GET' });
+  }
+
+  async getTarifasServicio(id) {
+    return this.request(`/historial-tarifas/servicio/${id}`, { method: 'GET' });
+  }
+
+  async getTarifasActuales(id) {
+    return this.request(`/historial-tarifas/servicio/${id}/actual`, { method: 'GET' });
+  }
+
   // CLIENTES
   async getClientes(search = '') {
     return this.request(`/clientes${search ? `?search=${search}` : ''}`, { method: 'GET' });
@@ -196,6 +213,10 @@ class APIClient {
     return this.request(`/citas${params}`, { method: 'GET' });
   }
 
+  async getCitaById(id) {
+    return this.request(`/citas/${id}`, { method: 'GET' });
+  }
+
   async crearCita(datos) {
     logger.info('Creando cita', datos.fecha);
     return this.request('/citas', {
@@ -208,6 +229,19 @@ class APIClient {
     return this.request(`/citas/${id}/estado`, {
       method: 'PATCH',
       body: JSON.stringify({ estado }),
+    });
+  }
+
+  async actualizarCita(id) {
+    return this.request(`/citas/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(datos),
+    });
+  }
+
+  async cancelarCita(id) {
+    return this.request(`/citas/${id}`, {
+      method: 'DELETE',
     });
   }
 
@@ -252,6 +286,43 @@ class APIClient {
       method: 'POST',
       body: JSON.stringify(datos),
     });
+  }
+
+  //NOMINAS
+
+  async calcularNomina(datos) {
+    return this.request('/nominas/calcular', {
+      method: 'POST',
+      body: JSON.stringify(datos),
+    });
+  }
+
+  async getDetalles(params = '') {
+    return this.request(`/nominas/detalles${params}`, { method: 'GET' });
+  }
+
+  async getNominas(params = '') {
+    return this.request(`/nominas${params}`, { method: 'GET' });
+  }
+
+  async getIdNomina(id) {
+    return this.request(`/nominas/${id}`, { method: 'GET' });
+  }
+
+  //DESCUENTOS NOMINAS
+  async crearDescuentoNomina(datos) {
+    return this.request('/descuentos-nomina', {
+      method: 'POST',
+      body: JSON.stringify(datos),
+    });
+  }
+
+  async getDescuentosNomina(params = '') {
+    return this.request(`/descuentos-nomina${params}`, { method: 'GET' });
+  }
+
+  async getDescuentoNominaById(id) {
+    return this.request(`/descuentos-nomina/${id}`, { method: 'GET' });
   }
 
   // ROLES
