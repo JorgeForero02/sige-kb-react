@@ -512,7 +512,7 @@
 }
 
 .modal-content {
-  background: white;
+  background: white!important;
   border-radius: 12px;
   padding: 2rem;
   max-width: 800px;
