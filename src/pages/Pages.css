@@ -724,7 +724,7 @@
 
 .cita-cliente {
   font-weight: 700;
-  color: var(--dark);
+  color: #e63e6d;
   margin-bottom: 0.3rem;
 }
 
@@ -770,7 +770,7 @@
 
 .cita-cliente {
   font-weight: 700;
-  color: var(--dark);
+  color: #e63e6d;
   margin: 0.5rem 0 0 0;
   font-size: 1.05rem;
 }
@@ -1295,7 +1295,7 @@
 
 .cita-cliente {
   font-weight: 600;
-  color: #1f2937;
+  color: #060606;
   font-size: 1.1rem;
   margin-bottom: 0.25rem;
 }
@@ -1360,4 +1360,309 @@
     padding: 0.5rem;
     min-height: 60px;
   }
+}
+
+/* ESTILOS PARA EL MODAL DE DETALLES DE CITAS - DISEÑO MINIMALISTA */
+.cita-detalles-modal {
+  padding: 0;
+}
+
+/* Header del modal - diseño limpio */
+.cita-modal-header {
+  background: white;
+  padding: 0 0 1.5rem 0;
+  margin: 0 0 1.5rem 0;
+  border-bottom: none;
+}
+
+.cita-fecha-estado {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cita-fecha-grande {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-align: center;
+}
+
+.cita-estado-grande {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #059669;
+  text-align: center;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Línea divisoria */
+.cita-divider {
+  border: none;
+  border-top: 2px solid #e5e7eb;
+  margin: 1.5rem 0;
+}
+
+/* Secciones del modal - diseño minimalista */
+.cita-seccion {
+  margin-bottom: 1.5rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.cita-seccion:last-child {
+  margin-bottom: 0;
+}
+
+.cita-seccion-titulo {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e63e6d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+/* Información del cliente */
+.cita-info-cliente {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cita-nombre-cliente {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #e63e6d;
+  margin-bottom: 0.5rem;
+}
+
+.cita-telefono {
+  font-size: 1rem;
+  color: #6b7280;
+  padding: 0.25rem 0;
+}
+
+/* Horario */
+.cita-horario {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+  background: #f7cedb;
+  padding: 0.75rem;
+  border-radius: 6px;
+  text-align: center;
+  border: 1px solid #e5e7eb;
+}
+
+/* Servicio */
+.cita-info-servicio {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cita-nombre-servicio {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.cita-descripcion-servicio {
+  font-size: 0.9rem;
+  color: #6b7280;
+  line-height: 1.4;
+  padding: 0.5rem 0;
+}
+
+/* Detalles adicionales - diseño en línea */
+.cita-detalles-adicionales {
+  background: white;
+  padding: 1rem 0;
+}
+
+.detalle-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.detalle-item:last-child {
+  border-bottom: none;
+}
+
+.detalle-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detalle-valor {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.detalle-valor.precio {
+  color: #059669;
+}
+
+/* Empleado */
+.cita-info-empleado {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #1f2937;
+  padding: 0.75rem;
+  background: #f7cedb;
+  border-radius: 6px;
+  text-align: center;
+  border: 1px solid #e5e7eb;
+}
+
+/* Badges para estados - minimalistas */
+.badge-pendiente {
+  background: transparent;
+  color: #f59e0b !important;
+  border: none !important;
+}
+
+.badge-confirmada {
+  background: transparent;
+  color: #10b981 !important;
+  border: none !important;
+}
+
+.badge-completada {
+  background: transparent;
+  color: #3b82f6 !important;
+  border: none !important;
+}
+
+.badge-cancelada {
+  background: transparent;
+  color: #ef4444 !important;
+  border: none !important;
+}
+
+/* MODAL ACTIONS */
+.modal-actions {
+  display: flex !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  gap: 1rem !important;
+  margin-top: 2rem !important;
+  padding-top: 1.5rem !important;
+  border-top: 1px solid #e5e7eb !important;
+  width: 100% !important;
+}
+
+.modal-actions .btn {
+  width: auto !important;
+  min-width: 140px !important;
+  margin: 0 !important;
+  padding: 0.75rem 1.5rem !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  transition: all 0.3s ease !important;
+}
+
+/* Botón primario */
+.modal-actions .btn-primary {
+  background: #e63e6d !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: 0 1px 2px rgba(230, 62, 109, 0.2) !important;
+}
+
+.modal-actions .btn-primary:hover:not(:disabled) {
+  background: #d12e5d !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 6px rgba(230, 62, 109, 0.3) !important;
+}
+
+/* Botón secundario */
+.modal-actions .btn-secondary {
+  background: #d12e5d  !important;
+  color: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+}
+
+.modal-actions .btn-secondary:hover {
+  background: #f9fafb !important;
+  color: #374151 !important;
+  border-color: #9ca3af !important;
+}
+
+/* Responsive para móviles */
+@media (max-width: 768px) {
+  .cita-modal-header {
+    padding: 0 0 1rem 0;
+    margin: 0 0 1rem 0;
+  }
+  
+  .cita-fecha-grande {
+    font-size: 0.9rem;
+  }
+  
+  .cita-estado-grande {
+    font-size: 1rem;
+  }
+  
+  .cita-nombre-cliente {
+    font-size: 1.1rem;
+  }
+  
+  .cita-horario {
+    font-size: 1rem;
+    padding: 0.5rem;
+  }
+  
+  .modal-actions {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+  }
+  
+  .modal-actions .btn {
+    width: 100% !important;
+    min-width: auto !important;
+  }
+  
+  .detalle-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    text-align: left;
+  }
+}
+
+/* Ajustes específicos para el diseño de la imagen */
+.cita-detalles-adicionales .row {
+  margin: 0;
+}
+
+.cita-detalles-adicionales .col-6 {
+  padding: 0 0.5rem;
+}
+
+/* Quitar todos los pseudo-elementos con iconos */
+.cita-fecha-grande::before,
+.cita-telefono::before,
+.cita-horario::before,
+.cita-nombre-servicio::before,
+.cita-info-empleado::before {
+  display: none !important;
 }

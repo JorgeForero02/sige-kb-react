@@ -1,5 +1,4 @@
-﻿// App.js
-import React from 'react';
+﻿import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CategoriasProvider } from './context/CategoriasContext'; 
@@ -17,6 +16,7 @@ import { RolesPage } from './pages/RolesPage';
 import { UsuariosPage } from './pages/UsuariosPage';
 import { ServiciosEmpleadoPage } from './pages/ServiciosEmpleadoPage';
 import { NominaPage } from './pages/NominaPage';
+import {AgendaEmpleadoPage} from './pages/AgendaEmpleadoPage';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 
@@ -30,6 +30,7 @@ function App() {
             <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
             <Route path="/empleados" element={<ProtectedRoute><EmpleadosPage /></ProtectedRoute>} />
             <Route path="/servicios-empleado" element={<ServiciosEmpleadoPage />} />
+            <Route path="/agenda-empleado" element={<AgendaEmpleadoPage />} />
             <Route path="/categorias" element={<ProtectedRoute><CategoriasPage /></ProtectedRoute>} />
             <Route path="/categorias/:categoriaNombre" element={<ProtectedRoute><CategoriaDetailPage /></ProtectedRoute>} />
             <Route path="/clientes" element={<ProtectedRoute><ClientesPage /></ProtectedRoute>} />

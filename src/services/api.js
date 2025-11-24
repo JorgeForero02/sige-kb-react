@@ -245,6 +245,10 @@ class APIClient {
     });
   }
 
+  async getAgendaEmpleado(empleadoId) {
+    return this.request(`/citas/empleado/${empleadoId}`, { method: 'GET' });
+  }
+
   // INGRESOS
   async getIngresos(params = '') {
     return this.request(`/ingresos${params}`, { method: 'GET' });
