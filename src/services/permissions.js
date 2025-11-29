@@ -10,8 +10,8 @@ export const PERMISSIONS = {
   // ADMIN: Gestión de roles y usuarios
   VIEW_USUARIOS: ['Administrador'],
   CREATE_USUARIO: ['Administrador'],
-  EDIT_USUARIO: ['Administrador'],
-  DELETE_USUARIO: ['Administrador'],
+  /*EDIT_USUARIO: ['Administrador'],
+  DELETE_USUARIO: ['Administrador'],*/
 
   // GERENTE: Categorías, servicios, clientes, agenda, empleados, caja
   VIEW_CATEGORIAS: ['Administrador', 'Gerente'],

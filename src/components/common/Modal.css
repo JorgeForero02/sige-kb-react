@@ -1,67 +1,135 @@
-/* MODAL ACTIONS - Estilos corregidos */
-.modal-actions {
-  display: flex !important;
-  justify-content: flex-end !important;
-  align-items: center !important;
-  gap: 1rem !important;
-  margin-top: 2rem !important;
-  padding-top: 1.5rem !important;
-  border-top: 1px solid #e5e7eb !important;
-  width: 100% !important;
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease-out;
 }
 
-.modal-actions .btn {
-  width: auto !important;
-  min-width: 150px !important;
-  margin: 0 !important;
-  padding: 0.75rem 1.5rem !important;
-  font-size: 0.95rem !important;
-  font-weight: 600 !important;
-  position: static !important;
-  left: 0 !important;
-  top: 0 !important;
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  animation: slideIn 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Botón primario en modales */
-.modal-actions .btn-primary {
-  background: #f74780 !important;
-  color: white !important;
-  border: none !important;
-  border-radius: 8px !important;
-  box-shadow: 0 2px 4px rgba(247, 71, 128, 0.2) !important;
-  width: auto !important;
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  position: relative;
 }
 
-.modal-actions .btn-primary:hover:not(:disabled) {
-  background: #e63e6d !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 4px 8px rgba(247, 71, 128, 0.3) !important;
+.modal-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  letter-spacing: -0.025em;
 }
 
-/* Botón secundario en modales */
-.modal-actions .btn-secondary {
-  background: white !important;
-  color: #6b7280 !important;
-  border: 1px solid #d1d5db !important;
-  border-radius: 8px !important;
-  width: auto !important;
+.modal-close-btn {
+  background: #f3f4f6;
+  border: none;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #6b7280;
+  font-size: 1.25rem;
+  transition: all 0.2s ease;
+  position: relative;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
 }
 
-.modal-actions .btn-secondary:hover {
-  background: #f9fafb !important;
-  color: #374151 !important;
-  border-color: #9ca3af !important;
+.modal-close-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+  transform: scale(1.05);
 }
 
-/* Responsive para móviles */
-@media (max-width: 768px) {
-  .modal-actions {
-    flex-direction: column !important;
-    gap: 0.75rem !important;
+.modal-close-btn:active {
+  transform: scale(0.95);
+}
+
+.modal-body {
+  padding: 1.5rem;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Tamaños del modal */
+.modal-sm {
+  max-width: 400px;
+}
+
+.modal-md {
+  max-width: 600px;
+}
+
+.modal-lg {
+  max-width: 800px;
+}
+
+.modal-xl {
+  max-width: 1000px;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .modal-overlay {
+    padding: 0.5rem;
   }
   
-  .modal-actions .btn {
-    width: 100% !important;
-    min-width: auto !important;
+  .modal-header {
+    padding: 1rem 1rem 0.75rem 1rem;
+  }
+  
+  .modal-body {
+    padding: 1rem;
+  }
+  
+  .modal-title {
+    font-size: 1.125rem;
   }
 }

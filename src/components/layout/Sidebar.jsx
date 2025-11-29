@@ -4,8 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useCategorias } from '../../context/CategoriasContext';
 import './Sidebar.css';
 
-export function Sidebar() {
-  const [isOpen, setIsOpen] = useState(true);
+export function Sidebar({ isOpen, setIsOpen }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -90,16 +89,6 @@ export function Sidebar() {
             </div>
           </div>
         );
-
-      default:
-        return (
-          <div className="sidebar-user-info">
-            <i className="bi bi-person-circle user-icon"></i>
-            <div className="sidebar-user">
-              <div className="sidebar-user">Panel de Control</div>
-            </div>
-          </div>
-        );
     }
   };
 
@@ -125,18 +114,10 @@ export function Sidebar() {
     // Administrador solo ve Dashboard y Seguridad
     if (rolString === 'Administrador' || rolString === 'Admin') {
       return [
-        base,
-        {
-          type: 'dropdown',
-          label: 'Seguridad',
-          icon: 'bi-shield-check',
-          isOpen: securityOpen,
-          onClick: () => setSecurityOpen(!securityOpen),
-          subItems: [
-            { path: '/roles', icon: 'bi-person-gear', label: 'Roles' },
-            { path: '/usuarios', icon: 'bi-person-badge-fill', label: 'Usuarios' }
-          ]
-        }
+        base, {
+          path: '/roles', icon: 'bi-person-gear', label: 'Roles'
+        },
+        { path: '/usuarios', icon: 'bi-person-badge-fill', label: 'Usuarios' }
       ];
     }
 
@@ -163,14 +144,14 @@ export function Sidebar() {
         },
         { path: '/empleados', icon: 'bi-person-badge-fill', label: 'Empleados' },
         { path: '/caja', icon: 'bi-cash-coin', label: 'Caja' },
-        {path: '/nomina', icon: 'bi-journal-text', label: 'Nómina' }
+        { path: '/nomina', icon: 'bi-journal-text', label: 'Nómina' }
       ];
     }
 
     // Empleado - Solo servicios y agenda (sin dashboard)
     if (rolString === 'Empleado') {
       return [
-        base,{
+        base, {
           path: '/servicios-empleado',
           icon: 'bi-scissors',
           label: 'Servicios'
@@ -219,15 +200,6 @@ export function Sidebar() {
 
   return (
     <>
-      {!isOpen && (
-        <button
-          className="hamburger hamburger-outside"
-          onClick={() => setIsOpen(true)}
-        >
-          <i className="bi bi-list"></i>
-        </button>
-      )}
-
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
           <div className="sidebar-title-wrapper">

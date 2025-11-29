@@ -46,7 +46,11 @@ class APIClient {
 
       if (!response.ok) {
         logger.apiError(endpoint, response.status, data.message);
-        throw new Error(data.message || 'Error en la solicitud');
+        const errorMessage = data.message || data.error || 'Error en la solicitud';
+        const error = new Error(errorMessage);
+        error.status = response.status;
+        error.data = data;
+        throw error;
       }
 
       logger.success(`[API] Respuesta OK`, endpoint);
@@ -232,7 +236,7 @@ class APIClient {
     });
   }
 
-  async actualizarCita(id) {
+  async actualizarCita(id, datos) {
     return this.request(`/citas/${id}`, {
       method: 'PUT',
       body: JSON.stringify(datos),

@@ -16,12 +16,12 @@ export function Modal({
     }
   };
 
-  const getModalSize = () => {
+  const getModalSizeClass = () => {
     const sizes = {
-      sm: '400px',
-      md: '600px',
-      lg: '800px',
-      xl: '1000px'
+      sm: 'modal-sm',
+      md: 'modal-md',
+      lg: 'modal-lg',
+      xl: 'modal-xl'
     };
     return sizes[size] || sizes.md;
   };
@@ -29,8 +29,7 @@ export function Modal({
   return (
     <div className="modal-overlay" onClick={handleOverlayClick}>
       <div 
-        className="modal-content"
-        style={{ maxWidth: getModalSize() }}
+        className={`modal-content ${getModalSizeClass()}`}
       >
         <div className="modal-header">
           {title && <h3 className="modal-title">{title}</h3>}
@@ -38,8 +37,9 @@ export function Modal({
             className="modal-close-btn"
             onClick={onClose}
             aria-label="Cerrar modal"
+            type="button"
           >
-            <i className="bi bi-x"></i>
+            <i className="bi bi-x-lg"></i>
           </button>
         </div>
         <div className="modal-body">

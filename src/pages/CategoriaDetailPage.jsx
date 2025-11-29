@@ -10,6 +10,142 @@ import api from '../services/api';
 import '../pages/Pages.css';
 import { usePermissions } from '../hooks/usePermissions';
 
+// Modal de Confirmación Personalizado
+function ModalConfirmacionPersonalizado({ show, onClose, onConfirm, title, message, confirmText = 'Confirmar', cancelText = 'Cancelar', isDanger = false }) {
+  if (!show) return null;
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 3000
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '16px',
+        padding: '2rem',
+        width: '90%',
+        maxWidth: '400px',
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+        position: 'relative',
+        borderLeft: `5px solid ${isDanger ? '#ef4444' : '#f59e0b'}`
+      }}>
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '1rem',
+            right: '1rem',
+            background: 'none',
+            border: 'none',
+            fontSize: '1.5rem',
+            cursor: 'pointer',
+            color: '#666',
+            width: '30px',
+            height: '30px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '50%',
+            transition: 'all 0.3s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = '#fee2e2';
+            e.target.style.color = '#ef4444';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = 'none';
+            e.target.style.color = '#666';
+          }}
+        >
+          ×
+        </button>
+
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <div style={{
+            width: '80px',
+            height: '80px',
+            borderRadius: '50%',
+            background: isDanger ? 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)' : 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1.5rem',
+            fontSize: '2rem',
+            color: isDanger ? '#991b1b' : '#92400e',
+            fontWeight: '700',
+            boxShadow: `0 4px 12px rgba(${isDanger ? '239, 68, 68' : '245, 158, 11'}, 0.2)`
+          }}>
+            {isDanger ? '!' : '?'}
+          </div>
+          <h4 style={{
+            margin: '0 0 0.8rem',
+            color: '#1f2937',
+            fontSize: '1.3rem',
+            fontWeight: '700',
+            letterSpacing: '-0.5px'
+          }}>
+            {title}
+          </h4>
+          <p style={{
+            color: '#6b7280',
+            margin: 0,
+            lineHeight: '1.5',
+            fontSize: '0.95rem'
+          }}>
+            {message}
+          </p>
+        </div>
+
+        <div style={{
+          display: 'flex',
+          gap: '1rem',
+          justifyContent: 'center'
+        }}>
+          <Button
+            variant="primary"
+            onClick={onConfirm}
+            style={{
+              minWidth: '120px',
+              background: isDanger ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' : 'linear-gradient(135deg, #F74780 0%, #8A5A6B 100%)',
+              border: 'none',
+              borderRadius: '25px',
+              fontWeight: '600',
+              padding: '0.8rem 1.5rem',
+              fontSize: '0.9rem'
+            }}
+          >
+            {confirmText}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={onClose}
+            style={{
+              minWidth: '120px',
+              background: 'white',
+              border: '2px solid #e5e7eb',
+              borderRadius: '25px',
+              fontWeight: '600',
+              padding: '0.8rem 1.5rem',
+              fontSize: '0.9rem',
+              color: '#6b7280'
+            }}
+          >
+            {cancelText}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Modal({ show, onClose, children }) {
   if (!show) return null;
 
@@ -785,6 +921,17 @@ export function CategoriaDetailPage() {
   });
   const [citaEditando, setCitaEditando] = useState(null);
 
+  // Estados para modal de confirmación personalizado
+  const [showConfirmacionPersonalizada, setShowConfirmacionPersonalizada] = useState(false);
+  const [confirmacionData, setConfirmacionData] = useState({
+    title: '',
+    message: '',
+    confirmText: 'Confirmar',
+    cancelText: 'Cancelar',
+    isDanger: false,
+    onConfirm: null
+  });
+
   useEffect(() => {
     if (categoria) {
       if (activeTab === 'servicios') {
@@ -1024,11 +1171,16 @@ export function CategoriaDetailPage() {
   };
 
   const handleDeleteCliente = async (cliente) => {
-    showConfirmation(
-      async (clienteData) => {
+    setConfirmacionData({
+      title: 'Marcar cliente como inactivo',
+      message: `¿Está seguro de que desea marcar a ${cliente.nombre} ${cliente.apellido} como inactivo?`,
+      confirmText: 'Marcar inactivo',
+      cancelText: 'Cancelar',
+      isDanger: true,
+      onConfirm: async () => {
         try {
-          setDeletingCliente(clienteData.id);
-          await api.cambiarEstadoCliente(clienteData.id, 'inactivo');
+          setDeletingCliente(cliente.id);
+          await api.cambiarEstadoCliente(cliente.id, 'inactivo');
           success('Cliente marcado como inactivo exitosamente!');
           await loadClientes();
         } catch (err) {
@@ -1036,10 +1188,10 @@ export function CategoriaDetailPage() {
         } finally {
           setDeletingCliente(null);
         }
-      },
-      cliente,
-      'danger'
-    );
+        setShowConfirmacionPersonalizada(false);
+      }
+    });
+    setShowConfirmacionPersonalizada(true);
   };
 
   const handleToggleEstadoCliente = async (cliente) => {
@@ -1047,11 +1199,16 @@ export function CategoriaDetailPage() {
     const nuevoEstado = estadoActual === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO';
     const accion = nuevoEstado === 'ACTIVO' ? 'activar' : 'desactivar';
 
-    showConfirmation(
-      async (clienteData) => {
-        setChangingClienteState(clienteData.id);
+    setConfirmacionData({
+      title: `${accion.charAt(0).toUpperCase() + accion.slice(1)} cliente`,
+      message: `¿Está seguro de que desea ${accion} a ${cliente.nombre} ${cliente.apellido}?`,
+      confirmText: accion.charAt(0).toUpperCase() + accion.slice(1),
+      cancelText: 'Cancelar',
+      isDanger: nuevoEstado === 'INACTIVO',
+      onConfirm: async () => {
+        setChangingClienteState(cliente.id);
         try {
-          await api.cambiarEstadoCliente(clienteData.id, nuevoEstado.toLowerCase());
+          await api.cambiarEstadoCliente(cliente.id, nuevoEstado.toLowerCase());
           success(`Cliente ${accion}do exitosamente!`);
           await loadClientes();
         } catch (err) {
@@ -1059,10 +1216,10 @@ export function CategoriaDetailPage() {
         } finally {
           setChangingClienteState(null);
         }
-      },
-      cliente,
-      'warning'
-    );
+        setShowConfirmacionPersonalizada(false);
+      }
+    });
+    setShowConfirmacionPersonalizada(true);
   };
 
 
@@ -1106,7 +1263,17 @@ export function CategoriaDetailPage() {
       }, 500);
 
     } catch (err) {
-      showError(err.message || 'Error al crear cita');
+      // Detectar si es un error de conflicto (409)
+      const errorMsg = err.message || '';
+      console.error('DEBUG - Error completo:', err);
+      console.error('DEBUG - Status:', err.status);
+      console.error('DEBUG - Data:', err.data);
+      
+      if (err.status === 409 || errorMsg.includes('Ya existe') || errorMsg.includes('conflicto') || errorMsg.includes('horario')) {
+        showError('Ya existe una cita en ese horario para el empleado seleccionado. Por favor, elige otro horario o empleado.');
+      } else {
+        showError(errorMsg || 'Error al crear cita');
+      }
     }
     setSaving(false);
   };
@@ -1116,7 +1283,7 @@ export function CategoriaDetailPage() {
     setEditCitaForm({
       fecha: cita.fecha || fecha,
       hora_inicio: cita.hora_inicio || '',
-      duracion: cita.duracion?.toString() || '30',
+      duracion: cita.duracion?.toString() || '',
       encargado: cita.encargado?.toString() || '',
       cliente: cita.cliente?.toString() || '',
       servicio: cita.servicio?.toString() || ''
@@ -1134,7 +1301,6 @@ export function CategoriaDetailPage() {
 
     setSaving(true);
     try {
-      // Usar la misma estructura que en crear cita
       const citaData = {
         fecha: editCitaForm.fecha,
         hora_inicio: editCitaForm.hora_inicio,
@@ -1160,19 +1326,23 @@ export function CategoriaDetailPage() {
   };
 
   const handleCancelarCita = async (citaId) => {
-    showConfirmation(
-      async (id) => {
+    setConfirmacionData({
+      title: 'Cancelar cita',
+      message: '¿Está seguro de que desea cancelar esta cita?',
+      confirmText: 'Cancelar cita',
+      cancelText: 'Mantener',
+      onConfirm: async () => {
         try {
-          await api.cancelarCita(id);
+          await api.cancelarCita(citaId);
           success('Cita cancelada exitosamente!');
           await loadCitas();
         } catch (err) {
           showError(err.message || 'Error al cancelar cita');
         }
-      },
-      citaId,
-      'warning'
-    );
+        setShowConfirmacionPersonalizada(false);
+      }
+    });
+    setShowConfirmacionPersonalizada(true);
   };
 
 
@@ -1244,11 +1414,16 @@ export function CategoriaDetailPage() {
   };
 
   const handleDeleteServicio = async (servicio) => {
-    showConfirmation(
-      async (servicioData) => {
+    setConfirmacionData({
+      title: 'Eliminar servicio',
+      message: `¿Está seguro de que desea eliminar el servicio ${servicio.nombre}?`,
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      isDanger: true,
+      onConfirm: async () => {
         try {
-          setDeletingServicio(servicioData.id);
-          await api.eliminarServicio(servicioData.id);
+          setDeletingServicio(servicio.id);
+          await api.eliminarServicio(servicio.id);
           success('Servicio eliminado exitosamente!');
           await loadServicios();
         } catch (err) {
@@ -1256,10 +1431,10 @@ export function CategoriaDetailPage() {
         } finally {
           setDeletingServicio(null);
         }
-      },
-      servicio,
-      'danger'
-    );
+        setShowConfirmacionPersonalizada(false);
+      }
+    });
+    setShowConfirmacionPersonalizada(true);
   };
 
   const handleCancelEdit = () => {
@@ -1273,19 +1448,24 @@ export function CategoriaDetailPage() {
     const nuevoEstado = estadoActual === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO';
     const accion = nuevoEstado === 'ACTIVO' ? 'activar' : 'desactivar';
 
-    showConfirmation(
-      async (servicioData) => {
+    setConfirmacionData({
+      title: `${accion.charAt(0).toUpperCase() + accion.slice(1)} servicio`,
+      message: `¿Está seguro de que desea ${accion} el servicio ${servicio.nombre}?`,
+      confirmText: accion.charAt(0).toUpperCase() + accion.slice(1),
+      cancelText: 'Cancelar',
+      isDanger: nuevoEstado === 'INACTIVO',
+      onConfirm: async () => {
         try {
-          await api.actualizarServicio(servicioData.id, { estado: nuevoEstado.toLowerCase() });
+          await api.actualizarServicio(servicio.id, { estado: nuevoEstado.toLowerCase() });
           success(`Servicio ${accion}do exitosamente!`);
           loadServicios();
         } catch (err) {
           showError(err.message || `Error al ${accion} servicio`);
         }
-      },
-      servicio,
-      'warning'
-    );
+        setShowConfirmacionPersonalizada(false);
+      }
+    });
+    setShowConfirmacionPersonalizada(true);
   };
 
   const formatFecha = (fechaString) => {
@@ -1367,11 +1547,13 @@ export function CategoriaDetailPage() {
   });
 
   const handleConfirmarCita = (cita) => {
+    console.log('DEBUG: handleConfirmarCita llamado con cita:', cita?.id);
     setCitaSeleccionada(cita);
     setShowConfirmModal(true);
   };
 
   const handleConfirmarCitaDefinitiva = async () => {
+    console.log('DEBUG: handleConfirmarCitaDefinitiva llamado, citaSeleccionada:', citaSeleccionada?.id);
     if (!citaSeleccionada) {
       showError('No hay cita seleccionada');
       return;
@@ -1384,7 +1566,10 @@ export function CategoriaDetailPage() {
 
       success('Cita confirmada exitosamente!');
 
-      setShowIngresoModal(true);
+      // Esperar un poco antes de abrir el modal de ingreso
+      setTimeout(() => {
+        setShowIngresoModal(true);
+      }, 300);
 
       await loadCitas();
     } catch (err) {
@@ -2299,6 +2484,17 @@ export function CategoriaDetailPage() {
           setCitaSeleccionada(null);
           loadCitas();
         }}
+      />
+
+      <ModalConfirmacionPersonalizado
+        show={showConfirmacionPersonalizada}
+        onClose={() => setShowConfirmacionPersonalizada(false)}
+        onConfirm={confirmacionData.onConfirm}
+        title={confirmacionData.title}
+        message={confirmacionData.message}
+        confirmText={confirmacionData.confirmText}
+        cancelText={confirmacionData.cancelText}
+        isDanger={confirmacionData.isDanger}
       />
     </MainLayout>
   );

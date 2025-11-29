@@ -6,8 +6,9 @@ import { Card, Button, Input, Loading, Empty } from '../components/common/Compon
 import { AlertSimple } from '../components/common/AlertSimple';
 import { useAlert } from '../hooks/useAlert';
 import '../pages/Pages.css';
+import '../components/common/Notifications.css';
 
-function Modal({ show, onClose, children }) {
+function Modal({ show, onClose, children, title }) {
   if (!show) return null;
 
   return (
@@ -21,32 +22,43 @@ function Modal({ show, onClose, children }) {
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      zIndex: 1000
+      zIndex: 9999
     }}>
       <div style={{
-        background: 'white',
-        borderRadius: '12px',
-        padding: '2rem',
+        background: 'linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%)',
+        borderRadius: '24px',
+        padding: '2.5rem',
         width: '90%',
         maxWidth: '500px',
         maxHeight: '90vh',
         overflowY: 'auto',
-        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+        boxShadow: '0 20px 40px rgba(247, 71, 128, 0.2)',
+        border: '2px solid #F8D7E8',
         position: 'relative'
       }}>
         <button 
           onClick={onClose}
           style={{
             position: 'absolute',
-            top: '1rem',
-            right: '1rem',
+            top: '1.5rem',
+            right: '1.5rem',
             background: 'none',
             border: 'none',
-            fontSize: '1.5rem',
+            fontSize: '2rem',
             cursor: 'pointer',
-            color: '#666',
-            zIndex: 1001
+            color: '#9CA3AF',
+            zIndex: 10000,
+            padding: 0,
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'color 0.2s ease',
+            lineHeight: '1'
           }}
+          onMouseEnter={(e) => e.target.style.color = '#6B7280'}
+          onMouseLeave={(e) => e.target.style.color = '#9CA3AF'}
         >
           ×
         </button>
@@ -66,7 +78,20 @@ export function RolesPage() {
     nombre: '',
     descripcion: ''
   });
-  const { alert, success, error: showError, warning } = useAlert();
+  
+  // Estado para confirmación
+  const [showConfirmacion, setShowConfirmacion] = useState(false);
+  const [confirmacionData, setConfirmacionData] = useState({
+    title: '',
+    message: '',
+    action: null,
+    type: 'warning',
+    confirmText: 'Confirmar',
+    cancelText: 'Cancelar'
+  });
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  
+  const { alert, success, error: showError, warning, clearAlert } = useAlert();
 
   useEffect(() => {
     fetchRoles();
@@ -76,8 +101,10 @@ export function RolesPage() {
     setLoading(true);
     try {
       const result = await api.getRoles();
-      setRoles(result.data || []);
-      logger.success('Roles cargados', `${result.data?.length || 0} roles`);
+      console.log('Result from getRoles:', result);
+      const rolesData = result.data || result || [];
+      setRoles(Array.isArray(rolesData) ? rolesData : []);
+      logger.success('Roles cargados', `${Array.isArray(rolesData) ? rolesData.length : 0} roles`);
     } catch (err) {
       logger.error('Error al cargar roles', err.message);
       showError(err.message || 'Error al cargar roles');
@@ -118,40 +145,70 @@ export function RolesPage() {
         });
       }
 
-      if (result.success) {
-        success(editingId ? 'Rol actualizado!' : 'Rol creado!');
-        setFormData({ nombre: '', descripcion: '' });
-        setEditingId(null);
-        setShowModal(false);
-        fetchRoles();
-      } else {
-        throw new Error(result.message || 'Error al guardar');
-      }
+      // Si no hay error, significa que fue exitoso
+      success(
+        editingId ? 'Rol actualizado exitosamente!' : 'Rol creado exitosamente!',
+        { title: editingId ? 'Rol actualizado' : 'Rol creado', autoHide: false }
+      );
+      setFormData({ nombre: '', descripcion: '' });
+      setEditingId(null);
+      setShowModal(false);
+      await fetchRoles();
     } catch (err) {
-      logger.error('Error', err.message);
-      showError(err.message || 'Error al guardar rol');
+      // Recargar roles para sincronizar con la BD
+      await fetchRoles();
+      
+      // Mostrar error específico
+      if (err.status === 409) {
+        showError('Ya existe un rol con ese nombre. Intenta con otro nombre.');
+      } else {
+        logger.error('Error', err.message);
+        showError(err.message || 'Error al guardar rol');
+      }
     }
     setSaving(false);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar este rol?')) return;
+  const handleDeleteConfirm = (rol) => {
+    setConfirmacionData({
+      title: 'Eliminar Rol',
+      message: `¿Está seguro de que desea eliminar el rol "${rol.nombre}"?`,
+      action: async () => {
+        try {
+          await api.request(`/roles/${rol.id}`, {
+            method: 'DELETE'
+          });
 
+          success('Rol eliminado exitosamente!', { title: 'Rol eliminado', autoHide: false });
+          await fetchRoles();
+        } catch (err) {
+          logger.error('Error al eliminar', err.message);
+          showError(err.message || 'Error al eliminar rol');
+          throw err;
+        }
+      },
+      type: 'warning',
+      confirmText: 'Confirmar',
+      cancelText: 'Cancelar'
+    });
+    setShowConfirmacion(true);
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmacionData.action) return;
+    setConfirmLoading(true);
     try {
-      const result = await api.request(`/roles/${id}`, {
-        method: 'DELETE'
-      });
-
-      if (result.success) {
-        success('Rol eliminado!');
-        fetchRoles();
-      } else {
-        throw new Error(result.message || 'Error al eliminar');
-      }
+      await confirmacionData.action();
+      setShowConfirmacion(false);
     } catch (err) {
-      logger.error('Error al eliminar', err.message);
-      showError(err.message || 'Error al eliminar rol');
+      // el error ya se muestra usando showError
     }
+    setConfirmLoading(false);
+  };
+
+  const handleCancelConfirm = () => {
+    if (confirmLoading) return;
+    setShowConfirmacion(false);
   };
 
   const handleOpenModal = () => {
@@ -168,7 +225,17 @@ export function RolesPage() {
 
   return (
     <MainLayout title="Gestión de Roles">
-      {alert && <AlertSimple message={alert.message} type={alert.type} />}
+      {alert && (
+        <AlertSimple
+          show={!!alert}
+          title={alert.title}
+          message={alert.message}
+          type={alert.type}
+          confirmText="Aceptar"
+          onConfirm={clearAlert}
+          onClose={clearAlert}
+        />
+      )}
 
       <div className="page-header">
         <h4 style={{margin: 0, color: '#9CA3AF', fontSize: '0.9rem', textTransform: 'uppercase', fontWeight: '700'}}>
@@ -181,7 +248,13 @@ export function RolesPage() {
 
       {/* Modal para el formulario */}
       <Modal show={showModal} onClose={handleCloseModal}>
-        <h4 style={{marginBottom: '1.5rem', fontWeight: '700', fontSize: '1.2rem', color: '#1F2937'}}>
+        <h4 style={{
+          marginBottom: '1.5rem', 
+          fontWeight: '700', 
+          fontSize: '1.5rem', 
+          color: '#E63E6D',
+          textAlign: 'center'
+        }}>
           <i className="bi bi-shield-check"></i> {editingId ? 'Editar Rol' : 'Crear Rol'}
         </h4>
         <form onSubmit={handleSubmit} className="form-layout">
@@ -210,6 +283,24 @@ export function RolesPage() {
         </form>
       </Modal>
 
+      {/* Modal de confirmación */}
+      {showConfirmacion && (
+        <AlertSimple
+          show={showConfirmacion}
+          title={confirmacionData.title}
+          message={confirmacionData.message}
+          type={confirmacionData.type}
+          confirmText={confirmacionData.confirmText}
+          cancelText={confirmacionData.cancelText}
+          showCancel
+          onConfirm={handleConfirmAction}
+          onCancel={handleCancelConfirm}
+          onClose={handleCancelConfirm}
+          loading={confirmLoading}
+          closeOnOverlayClick={!confirmLoading}
+        />
+      )}
+
       <Card>
         <div className="card-header">
           <h3 className="card-title">
@@ -228,7 +319,6 @@ export function RolesPage() {
                   <th scope="col" className="fw-semibold">ID</th>
                   <th scope="col" className="fw-semibold">Rol</th>
                   <th scope="col" className="fw-semibold">Descripción</th>
-                  <th scope="col" className="fw-semibold">Estado</th>
                   <th scope="col" className="fw-semibold text-center">Acciones</th>
                 </tr>
               </thead>
@@ -245,25 +335,22 @@ export function RolesPage() {
                       </small>
                     </td>
                     <td className="align-middle">
-                      <span className={`badge ${rol.estado === 1 ? 'bg-success' : 'bg-danger'}`}>
-                        {rol.estado === 1 ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
-                    <td className="align-middle">
                       <div className="d-flex gap-1 justify-content-center">
                         <Button 
                           onClick={() => handleEdit(rol)} 
                           variant="outline-primary" 
                           size="sm"
                           className="btn-sm"
+                          title="Editar rol"
                         >
                           <i className="bi bi-pencil"></i> Editar
                         </Button>
                         <Button 
-                          onClick={() => handleDelete(rol.id)} 
+                          onClick={() => handleDeleteConfirm(rol)} 
                           variant="outline-danger" 
                           size="sm"
                           className="btn-sm"
+                          title="Eliminar rol"
                         >
                           <i className="bi bi-trash"></i> Eliminar
                         </Button>
