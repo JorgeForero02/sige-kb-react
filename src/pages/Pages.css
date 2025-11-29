@@ -703,6 +703,22 @@
   transition: all 0.3s ease;
 }
 
+.btn-categorias {
+  background: #fac8d4!important;
+  color: #414040 !important;
+  border: 2px solid #F74780 !important;
+  box-shadow: 0 8px 18px rgba(247, 71, 128, 0.15);
+}
+
+.btn-categorias:hover {
+  background: linear-gradient(135deg, #FFD1E0 0%, #F8C8DD 100%);
+  border-color: #E63E6D;
+  color: #D42A5E;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(247, 71, 128, 0.25);
+}
+
+
 .cita-item:hover {
   box-shadow: var(--shadow);
   transform: translateX(4px);
@@ -1638,19 +1654,6 @@
   background: #d12e5d !important;
   transform: translateY(-1px) !important;
   box-shadow: 0 4px 6px rgba(230, 62, 109, 0.3) !important;
-}
-
-/* Botón secundario */
-.modal-actions .btn-secondary {
-  background: #d12e5d  !important;
-  color: #ffffff !important;
-  border: 1px solid #d1d5db !important;
-}
-
-.modal-actions .btn-secondary:hover {
-  background: #f9fafb !important;
-  color: #374151 !important;
-  border-color: #9ca3af !important;
 }
 
 /* Responsive para móviles */

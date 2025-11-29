@@ -3,6 +3,7 @@ import { Header } from '../components/layout/Header';
 import { Sidebar } from '../components/layout/Sidebar';
 import apiClient from '../services/api';
 import { useAuth } from '../hooks/useAuth';
+import { AlertSimple } from '../components/common/AlertSimple';
 import '../pages/Pages.css';
 
 export function NominaPage() {
@@ -14,6 +15,21 @@ export function NominaPage() {
     const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [detalleNomina, setDetalleNomina] = useState(null);
     const [loadingDetalle, setLoadingDetalle] = useState(false);
+
+    const [showAlert, setShowAlert] = useState(false);
+    const [alertConfig, setAlertConfig] = useState({
+        type: 'success',
+        message: '',
+        title: ''
+    });
+
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    const [filtrosDescuentos, setFiltrosDescuentos] = useState({
+        empleado: 'todos',
+        mes: '',
+        fecha: ''
+    });
 
     const [descuentos, setDescuentos] = useState([]);
     const [loadingDescuentos, setLoadingDescuentos] = useState(false);
@@ -41,7 +57,6 @@ export function NominaPage() {
 
     const [empleados, setEmpleados] = useState([]);
 
-    // Cargar empleados
     useEffect(() => {
         const loadEmpleados = async () => {
             try {
@@ -54,27 +69,61 @@ export function NominaPage() {
         loadEmpleados();
     }, []);
 
-    const loadDescuentos = async () => {
+    const handleAlertClose = () => {
+        setShowAlert(false);
+    };
+
+    const toggleSidebar = () => {
+        setSidebarOpen(!sidebarOpen);
+    };
+
+    const closeSidebar = () => {
+        setSidebarOpen(false);
+    };
+
+    const loadDescuentos = async (filtros = {}) => {
         setLoadingDescuentos(true);
         try {
+            // Primero cargar todos los descuentos
             const response = await apiClient.getDescuentosNomina();
-            console.log('Respuesta completa de GET descuentos:', response);
+            let descuentosData = response.data || [];
 
-            // Según tu controlador, la respuesta viene en response.data
-            const descuentosData = response.data || [];
+            // Aplicar filtros en el frontend
+            if (filtros.empleado && filtros.empleado !== 'todos') {
+                descuentosData = descuentosData.filter(descuento =>
+                    descuento.idEmpleado == filtros.empleado
+                );
+            }
 
-            console.log('Descuentos procesados:', descuentosData);
+            if (filtros.mes) {
+                descuentosData = descuentosData.filter(descuento => {
+                    if (!descuento.fechaDescuento) return false;
+                    const fecha = new Date(descuento.fechaDescuento);
+                    const mesDescuento = String(fecha.getMonth() + 1).padStart(2, '0');
+                    return mesDescuento === filtros.mes;
+                });
+            }
+
+            if (filtros.fecha) {
+                descuentosData = descuentosData.filter(descuento =>
+                    descuento.fechaDescuento === filtros.fecha
+                );
+            }
+
             setDescuentos(descuentosData);
         } catch (error) {
-            console.error('Error cargando descuentos:', error);
-            alert('Error al cargar los descuentos');
+            setAlertConfig({
+                type: 'error',
+                title: 'Error',
+                message: 'Error al cargar los descuentos'
+            });
+            setShowAlert(true);
             setDescuentos([]);
         } finally {
             setLoadingDescuentos(false);
         }
     };
 
-    // Cargar descuentos cuando se active la pestaña de ajustes
     useEffect(() => {
         if (activeTab === 'ajustes') {
             loadDescuentos();
@@ -83,14 +132,24 @@ export function NominaPage() {
 
     const handleCreateDescuento = async () => {
         if (!descuentoData.descripcion || !descuentoData.valor || !descuentoData.fechaDescuento || !descuentoData.idEmpleado) {
-            alert('Por favor complete todos los campos requeridos');
+            setAlertConfig({
+                type: 'error',
+                title: 'Campos requeridos',
+                message: 'Por favor complete todos los campos requeridos'
+            });
+            setShowAlert(true);
             return;
         }
 
         setLoading(true);
         try {
             await apiClient.crearDescuentoNomina(descuentoData);
-            alert('Descuento creado exitosamente');
+            setAlertConfig({
+                type: 'success',
+                title: '¡Éxito!',
+                message: 'Descuento creado exitosamente'
+            });
+            setShowAlert(true);
             setShowDescuentoModal(false);
             setDescuentoData({
                 descripcion: '',
@@ -98,9 +157,14 @@ export function NominaPage() {
                 fechaDescuento: new Date().toISOString().split('T')[0],
                 idEmpleado: ''
             });
-            loadDescuentos(); // Recargar la lista
+            loadDescuentos();
         } catch (error) {
-            alert('Error creando descuento: ' + error.message);
+            setAlertConfig({
+                type: 'error',
+                title: 'Error',
+                message: 'Error creando descuento: ' + error.message
+            });
+            setShowAlert(true);
         } finally {
             setLoading(false);
         }
@@ -186,23 +250,38 @@ export function NominaPage() {
         }
     }, [nominas]);
 
-    // Cargar detalle de nómina por ID
     const handleVerDetalles = async (nomina) => {
         setLoadingDetalle(true);
         try {
-            // Usar el método getIdNomina para obtener los detalles por ID
             const response = await apiClient.getIdNomina(nomina.id);
             setDetalleNomina(response.data);
             setShowDetailsModal(true);
         } catch (error) {
             console.error('Error cargando detalle:', error);
-            alert('Error al cargar los detalles de la nómina');
+            setAlertConfig({
+                type: 'error',
+                title: 'Error',
+                message: 'Error al cargar los detalles de la nómina'
+            });
+            setShowAlert(true);
         } finally {
             setLoadingDetalle(false);
         }
     };
 
-    // Limpiar todos los filtros
+    const handleAplicarFiltrosDescuentos = () => {
+        loadDescuentos(filtrosDescuentos);
+    };
+
+    const handleClearDescuentosFilters = () => {
+        setFiltrosDescuentos({
+            empleado: 'todos',
+            mes: '',
+            fecha: ''
+        });
+        loadDescuentos();
+    };
+
     const handleClearFilters = () => {
         setFilters({
             colaboradora: 'todas',
@@ -211,17 +290,26 @@ export function NominaPage() {
         });
     };
 
-    // Calcular nómina
     const handleCalculateNomina = async () => {
         if (!calculateData.empleado || !calculateData.fecha_inicio || !calculateData.fecha_fin) {
-            alert('Por favor complete todos los campos requeridos');
+            setAlertConfig({
+                type: 'error',
+                title: 'Campos requeridos',
+                message: 'Por favor complete todos los campos requeridos'
+            });
+            setShowAlert(true);
             return;
         }
 
         setLoading(true);
         try {
             const response = await apiClient.calcularNomina(calculateData);
-            alert('Nómina calculada exitosamente');
+            setAlertConfig({
+                type: 'success',
+                title: '¡Éxito!',
+                message: 'Nómina calculada exitosamente'
+            });
+            setShowAlert(true);
             setShowCalculateModal(false);
             setCalculateData({
                 empleado: '',
@@ -231,7 +319,12 @@ export function NominaPage() {
             });
             loadNominas();
         } catch (error) {
-            alert('Error calculando nómina: ' + error.message);
+            setAlertConfig({
+                type: 'error',
+                title: 'Error',
+                message: 'Error calculando nómina: ' + error.message
+            });
+            setShowAlert(true);
         } finally {
             setLoading(false);
         }
@@ -274,11 +367,20 @@ export function NominaPage() {
     return (
         <div className="page-container">
             <Header />
-            <Sidebar />
+            <Sidebar
+                isOpen={sidebarOpen}
+                setIsOpen={setSidebarOpen}
+            />
 
             <main className="main-content">
                 <div className="container-fluid">
-                    {/* Header */}
+                    <button
+                        className="hamburger content-hamburger"
+                        onClick={toggleSidebar}
+                        aria-label="Toggle menu"
+                    >
+                        <i className="bi bi-list"></i>
+                    </button>
                     <div className="dashboard-header">
                         <h1 className="dashboard-title">Nómina</h1>
                         <p className="dashboard-subtitle">Gestión de nóminas y pagos a empleados</p>
@@ -509,6 +611,74 @@ export function NominaPage() {
                                         Los descuentos aplicados aquí se restarán automáticamente al calcular la nómina de cada empleado.
                                     </p>
 
+                                    {/* FILTROS PARA DESCUENTOS - AGREGAR ESTO */}
+                                    <div className="card mb-4">
+                                        <div className="card-body">
+                                            <h6 className="card-title" style={{ color: '#8A5A6B', fontWeight: '600', marginBottom: '1.5rem' }}>
+                                                Filtros de Descuentos
+                                            </h6>
+                                            <div className="row g-3">
+                                                <div className="col-md-3">
+                                                    <label className="form-label" style={{ fontWeight: '600', color: '#333' }}>Empleado</label>
+                                                    <select
+                                                        className="form-select"
+                                                        value={filtrosDescuentos.empleado}
+                                                        onChange={(e) => setFiltrosDescuentos({ ...filtrosDescuentos, empleado: e.target.value })}
+                                                        style={{ borderRadius: '8px', border: '1px solid #ddd' }}
+                                                    >
+                                                        <option value="todos">Todos los empleados</option>
+                                                        {empleados.map(emp => (
+                                                            <option key={emp.id} value={emp.id}>
+                                                                {emp.nombre} {emp.apellido}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                <div className="col-md-3">
+                                                    <label className="form-label" style={{ fontWeight: '600', color: '#333' }}>Mes</label>
+                                                    <select
+                                                        className="form-select"
+                                                        value={filtrosDescuentos.mes}
+                                                        onChange={(e) => setFiltrosDescuentos({ ...filtrosDescuentos, mes: e.target.value })}
+                                                        style={{ borderRadius: '8px', border: '1px solid #ddd' }}
+                                                    >
+                                                        <option value="">Todos los meses</option>
+                                                        <option value="01">Enero</option>
+                                                        <option value="02">Febrero</option>
+                                                        <option value="03">Marzo</option>
+                                                        <option value="04">Abril</option>
+                                                        <option value="05">Mayo</option>
+                                                        <option value="06">Junio</option>
+                                                        <option value="07">Julio</option>
+                                                        <option value="08">Agosto</option>
+                                                        <option value="09">Septiembre</option>
+                                                        <option value="10">Octubre</option>
+                                                        <option value="11">Noviembre</option>
+                                                        <option value="12">Diciembre</option>
+                                                    </select>
+                                                </div>
+
+                                                <div className="col-md-3 d-flex align-items-end gap-2">
+                                                    <button
+                                                        className="btn btn-primary w-50"
+                                                        onClick={handleAplicarFiltrosDescuentos}
+                                                        style={{ borderRadius: '8px' }}
+                                                    >
+                                                        Aplicar
+                                                    </button>
+                                                    <button
+                                                        className="btn btn-outline-secondary w-50"
+                                                        onClick={handleClearDescuentosFilters}
+                                                        style={{ borderRadius: '8px', border: '1px solid #ddd' }}
+                                                    >
+                                                        Limpiar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     {/* Lista de descuentos */}
                                     {loadingDescuentos ? (
                                         <div className="text-center">
@@ -519,12 +689,6 @@ export function NominaPage() {
                                     ) : descuentos.length === 0 ? (
                                         <div className="text-center py-4">
                                             <p className="text-muted">No hay descuentos registrados</p>
-                                            <button
-                                                className="btn btn-primary mt-2"
-                                                onClick={() => setShowDescuentoModal(true)}
-                                            >
-                                                Crear primer descuento
-                                            </button>
                                         </div>
                                     ) : (
                                         <div className="table-responsive">
@@ -830,7 +994,7 @@ export function NominaPage() {
                                                         className="form-control"
                                                         value={descuentoData.valor}
                                                         onChange={(e) => setDescuentoData({ ...descuentoData, valor: e.target.value })}
-                                                        placeholder="0.00"
+                                                        placeholder="000"
                                                         min="0"
                                                         step="0.01"
                                                         required
@@ -875,6 +1039,15 @@ export function NominaPage() {
                     )}
                 </div>
             </main>
+            <AlertSimple
+                show={showAlert}
+                onClose={handleAlertClose}
+                type={alertConfig.type}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                confirmText="Aceptar"
+                showCancel={false}
+            />
         </div>
     );
 }

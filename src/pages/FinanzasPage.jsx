@@ -301,7 +301,7 @@ function ModalCategoriaEgreso({ show, onClose, onSuccess }) {
           flexShrink: 0
         }}>
           <h4 style={{ margin: 0, fontWeight: '700', color: 'var(--dark)' }}>
-             Nueva Categoría
+            Nueva Categoría
           </h4>
           <button
             onClick={handleClose}
@@ -369,26 +369,51 @@ function ModalCategoriaEgreso({ show, onClose, onSuccess }) {
 
 function ModalEgreso({ show, onClose, categorias, onSuccess }) {
   const [formData, setFormData] = useState({
-    categoria: '', // Ahora será el ID de la categoría
+    categoria: '',
     valor: '',
     medio_pago: 'Efectivo',
     proveedor: '',
     descripcion: ''
   });
   const [saving, setSaving] = useState(false);
-  const { alert, success, error: showError, warning } = useAlert();
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({
+    type: 'success',
+    message: '',
+    title: ''
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.categoria || !formData.valor || !formData.medio_pago) {
-      warning('Completa los campos requeridos');
+    if (!formData.categoria) {
+      setAlertConfig({
+        type: 'error',
+        title: 'Campo requerido',
+        message: 'Selecciona una categoría'
+      });
+      setShowAlert(true);
+      return;
+    }
+
+    if (!formData.valor) {
+      setAlertConfig({
+        type: 'error',
+        title: 'Campo requerido',
+        message: 'Ingresa el valor del egreso'
+      });
+      setShowAlert(true);
       return;
     }
 
     const valorNumerico = parseFloat(formData.valor);
     if (isNaN(valorNumerico) || valorNumerico <= 0) {
-      showError('El valor del egreso debe ser mayor a 0');
+      setAlertConfig({
+        type: 'error',
+        title: 'Valor inválido',
+        message: 'El valor del egreso debe ser mayor a 0'
+      });
+      setShowAlert(true);
       return;
     }
 
@@ -396,26 +421,51 @@ function ModalEgreso({ show, onClose, categorias, onSuccess }) {
     try {
       await api.crearEgreso({
         fecha: new Date().toISOString().slice(0, 10),
-        categoria: parseInt(formData.categoria), // Envía el ID de la categoría
+        categoria: parseInt(formData.categoria),
         valor: valorNumerico,
         medio_pago: formData.medio_pago,
-        proveedor: formData.proveedor || null,
-        descripcion: formData.descripcion || null
+        proveedor: formData.proveedor || '',
+        descripcion: formData.descripcion || ''
       });
 
-      success('Egreso registrado exitosamente!');
-      setFormData({
-        categoria: '',
-        valor: '',
-        medio_pago: 'Efectivo',
-        proveedor: '',
-        descripcion: ''
+      // Mostrar alerta de éxito
+      setAlertConfig({
+        type: 'success',
+        title: '¡Éxito!',
+        message: 'Egreso registrado exitosamente'
       });
-      onSuccess();
-      onClose();
+      setShowAlert(true);
+
+      // Limpiar formulario y cerrar después de un tiempo
+      setTimeout(() => {
+        setFormData({
+          categoria: '',
+          valor: '',
+          medio_pago: 'Efectivo',
+          proveedor: '',
+          descripcion: ''
+        });
+        onSuccess();
+        onClose();
+      }, 2000);
+
     } catch (err) {
-      logger.error('Error al crear egreso', err.message);
-      showError(err.message || 'Error al registrar egreso');
+      logger.error('Error al crear egreso', err);
+
+      let errorMessage = 'Error al registrar egreso';
+
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setAlertConfig({
+        type: 'error',
+        title: 'Error',
+        message: errorMessage
+      });
+      setShowAlert(true);
     }
     setSaving(false);
   };
@@ -431,139 +481,151 @@ function ModalEgreso({ show, onClose, categorias, onSuccess }) {
     onClose();
   };
 
+  const handleAlertClose = () => {
+    setShowAlert(false);
+  };
+
   if (!show) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: '100%',
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 1000
-    }}>
+    <>
       <div style={{
-        background: 'white',
-        borderRadius: '12px',
-        width: '90%',
-        maxWidth: '500px',
-        maxHeight: '90vh',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         display: 'flex',
-        flexDirection: 'column',
-        margin: '1rem',
-        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)'
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1000
       }}>
-        {/* Header fijo */}
         <div style={{
+          background: 'white',
+          borderRadius: '12px',
+          width: '90%',
+          maxWidth: '500px',
+          maxHeight: '90vh',
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '1.5rem 2rem',
-          borderBottom: '2px solid var(--border)',
-          flexShrink: 0
+          flexDirection: 'column',
+          margin: '1rem',
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)'
         }}>
-          <h4 style={{ margin: 0, fontWeight: '700', color: 'var(--dark)' }}>
-             Nuevo Egreso
-          </h4>
-          <button
-            onClick={handleClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '1.5rem',
-              cursor: 'pointer',
-              color: 'var(--gray)',
-              padding: 0,
-              width: '30px',
-              height: '30px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '50%'
-            }}
-          >
-            ×
-          </button>
-        </div>
+          {/* Header fijo */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '1.5rem 2rem',
+            borderBottom: '2px solid var(--border)',
+            flexShrink: 0
+          }}>
+            <h4 style={{ margin: 0, fontWeight: '700', color: 'var(--dark)' }}>
+              Nuevo Egreso
+            </h4>
+            <button
+              onClick={handleClose}
+              style={{
+                background: 'none',
+                border: 'none',
+                fontSize: '1.5rem',
+                cursor: 'pointer',
+                color: 'var(--gray)',
+                padding: 0,
+                width: '30px',
+                height: '30px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%'
+              }}
+            >
+              ×
+            </button>
+          </div>
 
-        {/* Contenido desplazable */}
-        <div style={{
-          padding: '2rem',
-          overflowY: 'auto',
-          flex: 1
-        }}>
-          {alert && <AlertSimple message={alert.message} type={alert.type} />}
-
-          <form onSubmit={handleSubmit} className="form-layout">
-            {/* Cambiado de Input a Select */}
-            <Select
-              label="Categoría *"
-              value={formData.categoria}
-              onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-              options={categorias.map(cat => ({
-                id: cat.id,
-                nombre: cat.nombre
-              }))}
-              required
-              placeholder="Selecciona una categoría"
-            />
-            <Input
-              label="Valor *"
-              type="number"
-              value={formData.valor}
-              onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
-              min="0"
-              step="0.01"
-              required
-            />
-            <Select
-              label="Medio de Pago *"
-              value={formData.medio_pago}
-              onChange={(e) => setFormData({ ...formData, medio_pago: e.target.value })}
-              options={[
-                { id: 'Efectivo', nombre: 'Efectivo' },
-                { id: 'Tarjeta', nombre: 'Tarjeta' },
-                { id: 'Transferencia', nombre: 'Transferencia' }
-              ]}
-              required
-            />
-            <Input
-              label="Proveedor"
-              type="text"
-              value={formData.proveedor}
-              onChange={(e) => setFormData({ ...formData, proveedor: e.target.value })}
-              placeholder="Nombre del proveedor"
-            />
-            <div style={{ gridColumn: '1 / -1' }}>
-              <Input
-                label="Descripción"
-                type="text"
-                value={formData.descripcion}
-                onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                placeholder="Detalles adicionales del egreso"
+          {/* Contenido desplazable */}
+          <div style={{
+            padding: '2rem',
+            overflowY: 'auto',
+            flex: 1
+          }}>
+            <form onSubmit={handleSubmit} className="form-layout">
+              <Select
+                label="Categoría *"
+                value={formData.categoria}
+                onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+                options={categorias.map(cat => ({
+                  id: cat.id,
+                  nombre: cat.nombre
+                }))}
+                required
+                placeholder="Selecciona una categoría"
               />
-            </div>
+              <Input
+                label="Valor *"
+                type="number"
+                value={formData.valor}
+                onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
+                min="0.01"
+                step="0.01"
+                required
+              />
+              <Select
+                label="Medio de Pago *"
+                value={formData.medio_pago}
+                onChange={(e) => setFormData({ ...formData, medio_pago: e.target.value })}
+                options={[
+                  { id: 'Efectivo', nombre: 'Efectivo' },
+                  { id: 'Tarjeta', nombre: 'Tarjeta' },
+                  { id: 'Transferencia', nombre: 'Transferencia' }
+                ]}
+                required
+              />
+              <Input
+                label="Proveedor"
+                type="text"
+                value={formData.proveedor}
+                onChange={(e) => setFormData({ ...formData, proveedor: e.target.value })}
+                placeholder="Nombre del proveedor (opcional)"
+              />
+              <div style={{ gridColumn: '1 / -1' }}>
+                <Input
+                  label="Descripción"
+                  type="text"
+                  value={formData.descripcion}
+                  onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+                  placeholder="Detalles adicionales del egreso (opcional)"
+                />
+              </div>
 
-            <div className="form-actions">
-              <Button variant="primary" disabled={saving}>
-                {saving ? 'Registrando...' : 'Registrar Egreso'}
-              </Button>
-              <Button variant="secondary" onClick={handleClose}>
-                Cancelar
-              </Button>
-            </div>
-          </form>
+              <div className="form-actions">
+                <Button variant="primary" disabled={saving}>
+                  {saving ? 'Registrando...' : 'Registrar Egreso'}
+                </Button>
+                <Button variant="secondary" onClick={handleClose}>
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* AlertSimple personalizado */}
+      <AlertSimple
+        show={showAlert}
+        onClose={handleAlertClose}
+        type={alertConfig.type}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        confirmText="Aceptar"
+        showCancel={false}
+      />
+    </>
   );
 }
-
-// Componente de Egresos (ÚNICO - con funcionalidad de categorías)
 function EgresosTab({
   egresos,
   loading,
@@ -587,9 +649,11 @@ function EgresosTab({
         marginBottom: '1rem',
         flexWrap: 'wrap'
       }}>
-        {/* Botón para crear categorías - AHORA A LA IZQUIERDA */}
-        <Button variant="outline" onClick={onNuevaCategoria}>
-          <i className="bi bi-tags"></i> Gestionar Categorías
+        <Button 
+          variant="categorias" 
+          onClick={onNuevaCategoria}
+        >
+          Nueva Categoría
         </Button>
 
         {/* Botón Nuevo Egreso */}
@@ -681,7 +745,7 @@ function EgresosTab({
                         fontWeight: '600',
                         color: 'var(--dark)'
                       }}>
-                        {new Date(egreso.fecha).toLocaleDateString('es-CO')}
+                        {new Date(egreso.fecha + 'T00:00:00Z').toLocaleDateString('es-CO', { timeZone: 'UTC' })}
                       </span>
                     </td>
                     <td>{egreso.categoriaInfo?.nombre}</td>
@@ -855,7 +919,7 @@ function IngresosTab({
                           fontWeight: '600',
                           color: 'var(--dark)'
                         }}>
-                          {new Date(ingreso.fecha).toLocaleDateString('es-CO')}
+                          {new Date(ingreso.fecha + 'T00:00:00Z').toLocaleDateString('es-CO', { timeZone: 'UTC' })}
                           {ingreso.created_at && (
                             <span style={{
                               fontSize: '0.875rem',
@@ -864,7 +928,8 @@ function IngresosTab({
                             }}>
                               {new Date(ingreso.created_at).toLocaleTimeString('es-CO', {
                                 hour: '2-digit',
-                                minute: '2-digit'
+                                minute: '2-digit',
+                                timeZone: 'UTC'
                               })}
                             </span>
                           )}

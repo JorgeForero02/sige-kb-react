@@ -111,9 +111,20 @@ export function CategoriasPage() {
     nombre: '',
     descripcion: ''
   });
-  const { alert, success, error: showError, warning } = useAlert();
+  const { alert, success, error: showError, warning, clearAlert } = useAlert();
   const { can } = usePermissions();
   const { refreshCategorias } = useCategorias();
+  const [confirmacion, setConfirmacion] = useState({
+    show: false,
+    title: '',
+    message: '',
+    type: 'warning',
+    confirmText: 'Confirmar',
+    cancelText: 'Cancelar',
+    showCancel: true,
+    action: null
+  });
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   if (!can('VIEW_CATEGORIAS')) {
     return (
@@ -220,20 +231,20 @@ export function CategoriasPage() {
   };
 
   const handleEdit = (categoria) => {
-  const estado = getEstadoCategoria(categoria);
-  
-  if (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') {
-    showError('No se puede editar una categoría inactiva.');
-    return;
-  }
+    const estado = getEstadoCategoria(categoria);
 
-  setCategoriaToEdit(categoria);
-  setFormData({
-    nombre: categoria.nombre,
-    descripcion: categoria.descripcion || ''
-  });
-  setShowEditModal(true);
-};
+    if (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') {
+      showError('No se puede editar una categoría inactiva.');
+      return;
+    }
+
+    setCategoriaToEdit(categoria);
+    setFormData({
+      nombre: categoria.nombre,
+      descripcion: categoria.descripcion || ''
+    });
+    setShowEditModal(true);
+  };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
@@ -262,42 +273,94 @@ export function CategoriasPage() {
     setSaving(false);
   };
 
-  const handleDelete = async (categoria) => {
-    if (!window.confirm(`¿Estás seguro de que quieres eliminar la categoría "${categoria.nombre}"?`)) {
-      return;
-    }
-
-    try {
-      await api.eliminarCategoria(categoria.id);
-      success('¡Categoría eliminada exitosamente!');
-      fetchCategorias();
-      refreshCategorias();
-    } catch (err) {
-      const errorMessage = err.response?.data?.message ||
-        err.response?.data?.error ||
-        err.message ||
-        'Error al eliminar la categoría';
-      showError(errorMessage);
-    }
+  const openConfirmacion = (config) => {
+    setConfirmacion(prev => ({
+      show: true,
+      title: '',
+      message: '',
+      type: 'warning',
+      confirmText: 'Confirmar',
+      cancelText: 'Cancelar',
+      showCancel: true,
+      action: null,
+      ...config
+    }));
   };
 
-  const handleToggleEstado = async (categoria) => {
-    const nuevoEstado = getEstadoCategoria(categoria) === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO';
-    const accion = nuevoEstado === 'ACTIVO' ? 'activar' : 'desactivar';
+  const closeConfirmacion = () => {
+    if (confirmLoading) return;
+    setConfirmacion(prev => ({ ...prev, show: false, action: null }));
+  };
 
-    if (!window.confirm(`¿Estás seguro de que quieres ${accion} la categoría "${categoria.nombre}"?`)) {
-      return;
-    }
-
+  const executeConfirmacion = async () => {
+    if (!confirmacion.action) return;
+    setConfirmLoading(true);
     try {
-      await api.actualizarCategoria(categoria.id, { estado: nuevoEstado.toLowerCase() });
-      success(`Categoría ${accion}da exitosamente!`);
-      fetchCategorias();
-      refreshCategorias();
+      await confirmacion.action();
+      closeConfirmacion();
     } catch (err) {
-      logger.error(`Error al ${accion} categoria`, err.message);
-      showError(err.message || `Error al ${accion} categoria`);
+      // El error ya se maneja en la acción
     }
+    setConfirmLoading(false);
+  };
+
+  const handleDelete = (categoria) => {
+    openConfirmacion({
+      title: 'Eliminar Categoría',
+      message: `¿Está seguro de que desea eliminar la categoría "${categoria.nombre}"?`,
+      confirmText: 'Eliminar',
+      type: 'error',
+      action: async () => {
+        try {
+          await api.eliminarCategoria(categoria.id);
+          success('¡Categoría eliminada exitosamente!', { title: 'Categoría eliminada', autoHide: false });
+          fetchCategorias();
+          refreshCategorias();
+        } catch (err) {
+          const errorMessage = err.response?.data?.message ||
+            err.response?.data?.error ||
+            err.message ||
+            'Error al eliminar la categoría';
+          showError(errorMessage);
+          throw err;
+        }
+      }
+    });
+  };
+
+  const handleToggleEstado = (categoria) => {
+    const estadoActual = getEstadoCategoria(categoria);
+    const isActiva = estadoActual === 'ACTIVO' || estadoActual === 'ACTIVA' || estadoActual === '1' || estadoActual === 'TRUE';
+
+    const nuevoEstado = isActiva ? 'INACTIVO' : 'ACTIVO';
+    const accion = isActiva ? 'desactivar' : 'activar';
+    const estadoValue = isActiva ? 0 : 1;
+
+    openConfirmacion({
+      title: `${isActiva ? 'Desactivar' : 'Activar'} Categoría`,
+      message: `¿Está seguro de que desea ${accion} la categoría "${categoria.nombre}"?`,
+      confirmText: isActiva ? 'Desactivar' : 'Activar',
+      type: isActiva ? 'warning' : 'success',
+      action: async () => {
+        try {
+          await api.actualizarCategoria(categoria.id, {
+            nombre: categoria.nombre,
+            descripcion: categoria.descripcion || '',
+            estado: estadoValue
+          });
+          success(`¡Categoría ${accion === 'activar' ? 'activada' : 'desactivada'} exitosamente!`, {
+            title: `Categoría ${accion === 'activar' ? 'activada' : 'desactivada'}`,
+            autoHide: false
+          });
+          fetchCategorias();
+          refreshCategorias();
+        } catch (err) {
+          logger.error(`Error al ${accion} categoria`, err.message);
+          showError(err.message || `Error al ${accion} categoria`);
+          throw err;
+        }
+      }
+    });
   };
 
   const handleOpenModal = () => {
@@ -323,7 +386,33 @@ export function CategoriasPage() {
 
   return (
     <MainLayout title="Categorías">
-      {alert && <AlertSimple message={alert.message} type={alert.type} />}
+      {alert && (
+        <AlertSimple
+          show={!!alert}
+          title={alert.title}
+          message={alert.message}
+          type={alert.type}
+          confirmText="Aceptar"
+          onConfirm={clearAlert}
+          onClose={clearAlert}
+        />
+      )}
+      {confirmacion.show && (
+        <AlertSimple
+          show={confirmacion.show}
+          title={confirmacion.title}
+          message={confirmacion.message}
+          type={confirmacion.type}
+          confirmText={confirmacion.confirmText}
+          cancelText={confirmacion.cancelText}
+          showCancel={confirmacion.showCancel}
+          onConfirm={executeConfirmacion}
+          onCancel={closeConfirmacion}
+          onClose={closeConfirmacion}
+          loading={confirmLoading}
+          closeOnOverlayClick={!confirmLoading}
+        />
+      )}
       {can('CREATE_CATEGORIA') && (
         <Button onClick={handleOpenModal}> + Nueva Categoría</Button>
       )}
@@ -514,6 +603,11 @@ export function CategoriasPage() {
                 const estadoInfo = getColorEstado(estado);
                 const fechaCreacion = formatFecha(categoria.created_at || categoria.fecha_creacion || categoria.fechaCreacion);
 
+                // Determinar si la categoría está inactiva
+                const isInactiva = estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE';
+                // Determinar si la categoría está activa
+                const isActiva = estado === 'ACTIVO' || estado === 'ACTIVA' || estado === '1' || estado === 'TRUE';
+
                 return (
                   <tr key={categoria.id}>
                     <td>
@@ -557,16 +651,45 @@ export function CategoriasPage() {
                             variant="secondary"
                             className="btn-sm"
                             onClick={() => handleEdit(categoria)}
-                            title={estado === 'INACTIVO' ? 'No se puede editar categorías inactivas' : 'Editar categoría'}
-                            disabled={estado === 'INACTIVO' || estado === 'INACTIVA'}
+                            title={isInactiva ? 'No se puede editar categorías inactivas' : 'Editar categoría'}
+                            disabled={isInactiva}
                             style={{
-                              opacity: (estado === 'INACTIVO' || estado === 'INACTIVA') ? 0.5 : 1,
-                              cursor: (estado === 'INACTIVO' || estado === 'INACTIVA') ? 'not-allowed' : 'pointer'
+                              opacity: isInactiva ? 0.5 : 1,
+                              cursor: isInactiva ? 'not-allowed' : 'pointer'
                             }}
                           >
                             <i className="bi bi-pencil"></i>
                             <span>Editar</span>
                           </Button>
+                        )}
+                        {can('EDIT_CATEGORIA') && (
+                          <>
+                            {/* Botón Activar - solo visible para categorías inactivas */}
+                            {isInactiva && (
+                              <Button
+                                variant="primary"
+                                className="btn-sm"
+                                onClick={() => handleToggleEstado(categoria)}
+                                title="Activar categoría"
+                              >
+                                <i className="bi bi-play-circle"></i>
+                                <span>Activar</span>
+                              </Button>
+                            )}
+
+                            {/* Botón Desactivar - solo visible para categorías activas */}
+                            {isActiva && (
+                              <Button
+                                variant="secondary"
+                                className="btn-sm"
+                                onClick={() => handleToggleEstado(categoria)}
+                                title="Desactivar categoría"
+                              >
+                                <i className="bi bi-pause-circle"></i>
+                                <span>Desactivar</span>
+                              </Button>
+                            )}
+                          </>
                         )}
                         {can('DELETE_CATEGORIA') && (
                           <Button

@@ -85,8 +85,18 @@ export function EmpleadosPage() {
     nuevaContrasena: '',
     confirmarContrasena: ''
   });
-  const { alert, success, error: showError, warning } = useAlert();
+  const { alert, success, error: showError, warning, clearAlert } = useAlert();
   const { can } = usePermissions();
+  const [estadoConfirm, setEstadoConfirm] = useState({
+    show: false,
+    empleado: null,
+    nuevoEstado: 1,
+    title: '',
+    message: '',
+    confirmText: 'Confirmar',
+    type: 'warning'
+  });
+  const [estadoLoading, setEstadoLoading] = useState(false);
 
   if (!can('VIEW_EMPLEADOS')) {
     return (
@@ -195,7 +205,10 @@ export function EmpleadosPage() {
 
       await api.crearUsuario(dataToSend);
 
-      success('¡Empleado creado exitosamente!', 'El empleado ha sido registrado en el sistema');
+      success(
+        'El empleado ha sido registrado en el sistema',
+        { title: 'Empleado creado', autoHide: false }
+      );
       logger.success('Empleado creado', formData.nombre);
 
       setFormData({
@@ -267,7 +280,10 @@ export function EmpleadosPage() {
 
       await api.actualizarUsuario(editingEmpleado.id, dataToSend);
 
-      success('¡Empleado actualizado exitosamente!', 'Los cambios han sido guardados correctamente');
+      success(
+        'Los cambios han sido guardados correctamente',
+        { title: 'Empleado actualizado', autoHide: false }
+      );
       logger.success('Empleado actualizado', formData.nombre);
 
       setFormData({
@@ -291,30 +307,51 @@ export function EmpleadosPage() {
     setSaving(false);
   };
 
-  const handleToggleEstado = async (empleado) => {
+  const handleToggleEstado = (empleado) => {
     const nuevoEstado = empleado.estado === 1 ? 0 : 1;
+    const accion = nuevoEstado === 1 ? 'activar' : 'desactivar';
+
+    setEstadoConfirm({
+      show: true,
+      empleado,
+      nuevoEstado,
+      title: `${accion === 'activar' ? 'Activar' : 'Desactivar'} Empleado`,
+      message: `¿Está seguro de que desea ${accion} al empleado "${empleado.nombre} ${empleado.apellido}"?`,
+      confirmText: accion === 'activar' ? 'Activar' : 'Desactivar',
+      type: accion === 'activar' ? 'success' : 'warning'
+    });
+  };
+
+  const closeEstadoConfirm = () => {
+    if (estadoLoading) return;
+    setEstadoConfirm(prev => ({ ...prev, show: false, empleado: null }));
+  };
+
+  const confirmToggleEstado = async () => {
+    if (!estadoConfirm.empleado) return;
+
+    const { empleado, nuevoEstado } = estadoConfirm;
     const accion = nuevoEstado === 1 ? 'activar' : 'desactivar';
     const accionTexto = nuevoEstado === 1 ? 'activado' : 'desactivado';
 
-    if (!window.confirm(`¿Estás seguro de que quieres ${accion} al empleado "${empleado.nombre} ${empleado.apellido}"?`)) {
-      return;
-    }
-
+    setEstadoLoading(true);
     setChangingState(empleado.id);
     try {
       await api.cambiarEstadoUsuario(empleado.id, nuevoEstado);
 
       success(
         `¡Empleado ${accionTexto} exitosamente!`,
-        `El empleado ha sido ${accionTexto} del sistema`
+        { title: `Empleado ${accionTexto}`, autoHide: false }
       );
       logger.success(`Empleado ${accionTexto}`, empleado.nombre);
 
       fetchData();
+      closeEstadoConfirm();
     } catch (err) {
       logger.error(`Error al ${accion} empleado`, err.message);
       showError(err.message || `Error al ${accion} el empleado`);
     } finally {
+      setEstadoLoading(false);
       setChangingState(null);
     }
   };
@@ -351,8 +388,8 @@ export function EmpleadosPage() {
       await api.cambiarPasswordUsuario(changingPassword.id, passwordData.nuevaContrasena);
 
       success(
-        '¡Contraseña cambiada exitosamente!',
-        'La contraseña ha sido actualizada correctamente'
+        'La contraseña ha sido actualizada correctamente',
+        { title: 'Contraseña actualizada', autoHide: false }
       );
       logger.success('Contraseña cambiada', changingPassword.nombre);
 
@@ -430,7 +467,33 @@ export function EmpleadosPage() {
 
   return (
     <MainLayout title="Empleados">
-      {alert && <AlertSimple message={alert.message} type={alert.type} />}
+      {alert && (
+        <AlertSimple
+          show={!!alert}
+          title={alert.title}
+          message={alert.message}
+          type={alert.type}
+          confirmText="Aceptar"
+          onConfirm={clearAlert}
+          onClose={clearAlert}
+        />
+      )}
+      {estadoConfirm.show && (
+        <AlertSimple
+          show={estadoConfirm.show}
+          title={estadoConfirm.title}
+          message={estadoConfirm.message}
+          type={estadoConfirm.type}
+          confirmText={estadoConfirm.confirmText}
+          cancelText="Cancelar"
+          showCancel
+          onConfirm={confirmToggleEstado}
+          onCancel={closeEstadoConfirm}
+          onClose={closeEstadoConfirm}
+          loading={estadoLoading}
+          closeOnOverlayClick={!estadoLoading}
+        />
+      )}
 
       <div>
         <div className="categorias-main-title">
@@ -523,7 +586,6 @@ export function EmpleadosPage() {
               label="Telefono"
               value={formData.telefono}
               onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-              placeholder="3001234567"
             />
           </div>
 

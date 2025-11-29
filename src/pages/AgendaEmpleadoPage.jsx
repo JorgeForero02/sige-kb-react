@@ -16,9 +16,19 @@ export const AgendaEmpleadoPage = () => {
     const [modalAbierto, setModalAbierto] = useState(false);
     const [citaSeleccionada, setCitaSeleccionada] = useState(null);
 
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
     useEffect(() => {
         cargarAgenda();
     }, []);
+
+    const toggleSidebar = () => {
+        setSidebarOpen(!sidebarOpen);
+    };
+
+    const closeSidebar = () => {
+        setSidebarOpen(false);
+    };
 
     const cargarAgenda = async () => {
         try {
@@ -76,7 +86,6 @@ export const AgendaEmpleadoPage = () => {
         return new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', opciones);
     };
 
-    // Obtener clase CSS para el badge según el estado
     const getBadgeClass = (estado) => {
         switch (estado) {
             case 'pendiente': return 'badge badge-pendiente';
@@ -128,9 +137,19 @@ export const AgendaEmpleadoPage = () => {
         <div className="dashboard-layout">
             <Header />
             <div className="dashboard-container">
-                <Sidebar />
+                <Sidebar
+                    isOpen={sidebarOpen}
+                    setIsOpen={setSidebarOpen} 
+                />
                 <div className="main-content">
                     <div className="content-area">
+                        <button
+                            className="hamburger content-hamburger"
+                            onClick={toggleSidebar}
+                            aria-label="Toggle menu"
+                        >
+                            <i className="bi bi-list"></i>
+                        </button>
                         <div className="dashboard-header">
                             <h1 className="dashboard-title">Mi Agenda</h1>
                             <p className="dashboard-subtitle">
@@ -154,9 +173,9 @@ export const AgendaEmpleadoPage = () => {
                                         onChange={(e) => setFiltroEstado(e.target.value)}
                                     >
                                         <option value="todas">Todas las citas</option>
-                                        <option value="pendiente">Pendientes</option>
+                                        <option value="pendiente">Programada</option>
                                         <option value="confirmada">Confirmadas</option>
-                                        <option value="completada">Completadas</option>
+                                        <option value="completada">Atendida</option>
                                         <option value="cancelada">Canceladas</option>
                                     </select>
                                 </div>
@@ -292,19 +311,6 @@ export const AgendaEmpleadoPage = () => {
                                                                     >
                                                                         <i className="bi bi-eye"></i> Detalles
                                                                     </button>
-
-                                                                    {cita.estado === 'pendiente' && (
-                                                                        <button
-                                                                            className="btn btn-success btn-sm"
-                                                                            onClick={() => {
-                                                                                // Aquí puedes implementar la confirmación de cita
-                                                                                console.log('Confirmar cita:', cita.id);
-                                                                            }}
-                                                                        >
-                                                                            <i className="bi bi-check-circle"></i> Confirmar
-                                                                        </button>
-                                                                    )}
-
                                                                 </div>
                                                             </div>
                                                         ))

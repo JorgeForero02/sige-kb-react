@@ -1,6 +1,6 @@
 ﻿import './Components.css';
 
-export {Modal} from './Modal';
+export { Modal } from './Modal';
 export function Card({ children, className = '' }) {
   return (
     <div className={`card-component ${className}`}>
@@ -33,7 +33,17 @@ export function Button({ children, onClick, disabled = false, variant = 'primary
   );
 }
 
-export function Input({ label, type = 'text', value, onChange, placeholder = '', required = false, className = '' }) {
+export function Input({
+  label,
+  type = 'text',
+  value,
+  onChange,
+  placeholder = '',
+  required = false,
+  className = '',
+  onWheel,
+  ...props
+}) {
   return (
     <div className="form-group">
       {label && <label>{label}</label>}
@@ -44,6 +54,8 @@ export function Input({ label, type = 'text', value, onChange, placeholder = '',
         placeholder={placeholder}
         required={required}
         className={`form-input ${className}`}
+        onWheel={onWheel}
+        {...props}
       />
     </div>
   );

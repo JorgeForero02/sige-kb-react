@@ -10,7 +10,6 @@ import api from '../services/api';
 import '../pages/Pages.css';
 import { usePermissions } from '../hooks/usePermissions';
 
-// Modal de Confirmación Personalizado
 function ModalConfirmacionPersonalizado({ show, onClose, onConfirm, title, message, confirmText = 'Confirmar', cancelText = 'Cancelar', isDanger = false }) {
   if (!show) return null;
 
@@ -245,21 +244,44 @@ function ModalTarifas({ show, onClose, servicio }) {
   };
 
   const formatFecha = (fechaString) => {
-    if (!fechaString) return ' - ';
+    if (!fechaString) {
+      const now = new Date();
+      return `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
+    }
+
     try {
+      if (fechaString.includes('/')) {
+        return fechaString;
+      }
+
+      const fechaParts = fechaString.split('T')[0].split('-');
+      if (fechaParts.length === 3) {
+        const [year, month, day] = fechaParts;
+        return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+      }
+
       const fecha = new Date(fechaString);
-      if (isNaN(fecha.getTime())) return ' - ';
-      return fecha.toLocaleDateString('es-ES');
+      if (isNaN(fecha.getTime())) {
+        return 'Fecha inválida';
+      }
+
+      const fechaAjustada = new Date(fecha.getTime() + fecha.getTimezoneOffset() * 60000);
+      const dia = fechaAjustada.getDate().toString().padStart(2, '0');
+      const mes = (fechaAjustada.getMonth() + 1).toString().padStart(2, '0');
+      const año = fechaAjustada.getFullYear();
+
+      return `${dia}/${mes}/${año}`;
     } catch (error) {
-      return ' - ';
+      console.error('Error formateando fecha:', error, fechaString);
+      return 'Fecha inválida';
     }
   };
 
   const formatMoneda = (valor) => {
     const numero = parseFloat(valor || 0);
     return new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency: 'USD'
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(numero);
   };
 
@@ -613,7 +635,7 @@ function ModalConfirmacion({ show, onClose, onConfirm, cita }) {
   );
 }
 
-function ModalIngreso({ show, onClose, cita, onSuccess }) {
+function ModalIngreso({ show, onClose, cita, onSuccess, servicios }) {
   const [formData, setFormData] = useState({
     valor: '',
     extra: '',
@@ -622,6 +644,22 @@ function ModalIngreso({ show, onClose, cita, onSuccess }) {
   });
   const [saving, setSaving] = useState(false);
   const { alert, success, error: showError } = useAlert();
+
+  const handleWheel = (e) => {
+    e.target.blur();
+  };
+
+  useEffect(() => {
+    if (show && cita) {
+      const servicioEncontrado = servicios.find(s => s.id === cita.servicio);
+      if (servicioEncontrado && servicioEncontrado.precio) {
+        setFormData(prev => ({
+          ...prev,
+          valor: servicioEncontrado.precio.toString()
+        }));
+      }
+    }
+  }, [show, cita]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -780,6 +818,10 @@ function ModalIngreso({ show, onClose, cita, onSuccess }) {
               <strong style={{ color: '#6b7280', fontSize: '0.8rem' }}>Duración:</strong>
               <span>{cita?.duracion} min</span>
             </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <strong style={{ color: '#6b7280', fontSize: '0.8rem' }}>Precio servicio:</strong>
+              <span>${cita?.servicioInfo?.precio ? parseFloat(cita.servicioInfo.precio).toFixed(2) : '0.00'}</span>
+            </div>
           </div>
         </div>
 
@@ -800,6 +842,7 @@ function ModalIngreso({ show, onClose, cita, onSuccess }) {
               step="0.01"
               required
               autoFocus
+              onWheel={handleWheel}
             />
             <Input
               label="Extra"
@@ -808,6 +851,7 @@ function ModalIngreso({ show, onClose, cita, onSuccess }) {
               onChange={(e) => setFormData({ ...formData, extra: e.target.value })}
               min="0"
               step="0.01"
+              onWheel={handleWheel}
             />
             <Select
               label="Medio de Pago *"
@@ -890,6 +934,7 @@ export function CategoriaDetailPage() {
   const [citas, setCitas] = useState([]);
   const [showCitaModal, setShowCitaModal] = useState(false);
   const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
+  const [filtroMes, setFiltroMes] = useState('');
   const [citaForm, setCitaForm] = useState({
     hora_inicio: '',
     duracion: '30',
@@ -934,17 +979,30 @@ export function CategoriaDetailPage() {
 
   useEffect(() => {
     if (categoria) {
-      if (activeTab === 'servicios') {
-        loadServicios();
-      }
-      else if (activeTab === 'clientes') {
+      loadServicios();
+
+      if (clientes.length === 0) {
         loadClientes();
       }
-      else if (categoria && activeTab === 'agenda') {
+
+      if (empleados.length === 0) {
+        loadEmpleados();
+      }
+
+      if (activeTab === 'agenda') {
         loadCitas();
       }
     }
-  }, [fecha, categoria, activeTab]);
+  }, [fecha, categoria, activeTab, filtroMes, filtroEstado]); // Agrega filtroMes
+  const loadEmpleados = async () => {
+    try {
+      const empleadosRes = await api.getUsuarios();
+      setEmpleados(empleadosRes.data || []);
+    } catch (error) {
+      console.error('Error al cargar empleados:', error);
+    }
+  };
+
 
   const loadServicios = async () => {
     if (!categoria) return;
@@ -977,14 +1035,12 @@ export function CategoriaDetailPage() {
   const loadClientes = async () => {
     if (!categoria) return;
 
-    setLoading(true);
     try {
       const clientesRes = await api.getClientes();
       setClientes(clientesRes.data || []);
     } catch (error) {
-      showError('Error al cargar clientes');
+      console.error('Error al cargar clientes:', error);
     }
-    setLoading(false);
   };
 
   const loadCitas = async () => {
@@ -992,16 +1048,26 @@ export function CategoriaDetailPage() {
 
     setLoading(true);
     try {
-      let params = `?fecha_inicio=${fecha}&fecha_fin=${fecha}`;
+      let params = '';
 
-      // Aplicar filtro de estado si no es "todas"
+      // Si hay filtro por mes, usar ese rango
+      if (filtroMes) {
+        const año = filtroMes.split('-')[0];
+        const mes = filtroMes.split('-')[1];
+        const primerDia = `${filtroMes}-01`;
+        const ultimoDia = new Date(año, mes, 0).getDate(); // Último día del mes
+        const fechaFin = `${filtroMes}-${ultimoDia.toString().padStart(2, '0')}`;
+        params = `?fecha_inicio=${primerDia}&fecha_fin=${fechaFin}`;
+      } else {
+        params = `?fecha_inicio=${fecha}&fecha_fin=${fecha}`;
+      }
+
       if (filtroEstado !== 'todas') {
         params += `&estado=${filtroEstado}`;
       }
 
-      const [citasRes, empleadosRes, serviciosRes] = await Promise.all([
+      const [citasRes, serviciosRes] = await Promise.all([
         api.getCitas(params),
-        api.getUsuarios(),
         api.getServicios()
       ]);
 
@@ -1026,7 +1092,6 @@ export function CategoriaDetailPage() {
       }
 
       setCitas(citasFiltradas);
-      setEmpleados(empleadosRes.data || []);
 
     } catch (error) {
       showError('Error al cargar citas');
@@ -1047,7 +1112,26 @@ export function CategoriaDetailPage() {
       return;
     }
 
+    // Validaciones adicionales para valores negativos
     const duracion = parseInt(servicioForm.duracion);
+    const precio = parseFloat(servicioForm.precio);
+    const porcentaje = servicioForm.porcentaje ? parseFloat(servicioForm.porcentaje) : 0;
+
+    if (duracion < 0) {
+      warning('La duración no puede ser negativa');
+      return;
+    }
+
+    if (precio < 0) {
+      warning('El precio no puede ser negativo');
+      return;
+    }
+
+    if (porcentaje < 0) {
+      warning('El porcentaje no puede ser negativo');
+      return;
+    }
+
     if (duracion % 15 !== 0) {
       warning('La duración debe ser múltiplo de 15 minutos (15, 30, 45, 60, 75, 90, etc.)');
       return;
@@ -1059,9 +1143,9 @@ export function CategoriaDetailPage() {
         nombre: servicioForm.nombre.trim(),
         descripcion: servicioForm.descripcion.trim(),
         duracion: duracion,
-        precio: parseFloat(servicioForm.precio),
+        precio: precio,
         categoria: categoria.id,
-        porcentaje: servicioForm.porcentaje ? parseFloat(servicioForm.porcentaje) : 0
+        porcentaje: porcentaje
       };
 
       await api.crearServicio(servicioData);
@@ -1176,7 +1260,7 @@ export function CategoriaDetailPage() {
       message: `¿Está seguro de que desea marcar a ${cliente.nombre} ${cliente.apellido} como inactivo?`,
       confirmText: 'Marcar inactivo',
       cancelText: 'Cancelar',
-      isDanger: true,
+      type: 'warning', // Cambiado de isDanger a type
       onConfirm: async () => {
         try {
           setDeletingCliente(cliente.id);
@@ -1188,7 +1272,6 @@ export function CategoriaDetailPage() {
         } finally {
           setDeletingCliente(null);
         }
-        setShowConfirmacionPersonalizada(false);
       }
     });
     setShowConfirmacionPersonalizada(true);
@@ -1244,8 +1327,11 @@ export function CategoriaDetailPage() {
 
     setSaving(true);
     try {
+      // Usar la fecha del formulario (si hay filtro por mes, usar fecha actual, sino usar la fecha seleccionada)
+      const fechaCita = filtroMes ? new Date().toISOString().slice(0, 10) : fecha;
+
       const citaData = {
-        fecha: fecha,
+        fecha: fechaCita,
         hora_inicio: citaForm.hora_inicio,
         duracion: parseInt(citaForm.duracion),
         encargado: parseInt(citaForm.encargado),
@@ -1263,14 +1349,13 @@ export function CategoriaDetailPage() {
       }, 500);
 
     } catch (err) {
-      // Detectar si es un error de conflicto (409)
       const errorMsg = err.message || '';
       console.error('DEBUG - Error completo:', err);
       console.error('DEBUG - Status:', err.status);
       console.error('DEBUG - Data:', err.data);
-      
+
       if (err.status === 409 || errorMsg.includes('Ya existe') || errorMsg.includes('conflicto') || errorMsg.includes('horario')) {
-        showError('Ya existe una cita en ese horario para el empleado seleccionado. Por favor, elige otro horario o empleado.');
+        showError('Ya existe una citas en ese horario para el empleado seleccionado. Por favor, elige otro horario o empleado.');
       } else {
         showError(errorMsg || 'Error al crear cita');
       }
@@ -1347,12 +1432,42 @@ export function CategoriaDetailPage() {
 
 
   const handleCambiarEstadoCita = async (citaId, nuevoEstado) => {
-    try {
-      await api.cambiarEstadoCita(citaId, nuevoEstado);
-      success(`Cita ${nuevoEstado}`);
-      await loadCitas();
-    } catch (err) {
-      showError(err.message || 'Error al cambiar estado');
+    if (nuevoEstado === 'completada') {
+      setConfirmacionData({
+        title: 'Completar cita',
+        message: '¿Ha completado la cita?',
+        confirmText: 'Sí, completar',
+        cancelText: 'Cancelar',
+        isDanger: false,
+        onConfirm: async () => {
+          try {
+            await api.cambiarEstadoCita(citaId, nuevoEstado);
+            success(`Cita ${nuevoEstado}`);
+
+            const citaCompletada = citas.find(c => c.id === citaId);
+            if (citaCompletada) {
+              setCitaSeleccionada(citaCompletada);
+              setTimeout(() => {
+                setShowIngresoModal(true);
+              }, 500);
+            }
+
+            await loadCitas();
+          } catch (err) {
+            showError(err.message || 'Error al cambiar estado');
+          }
+          setShowConfirmacionPersonalizada(false);
+        }
+      });
+      setShowConfirmacionPersonalizada(true);
+    } else {
+      try {
+        await api.cambiarEstadoCita(citaId, nuevoEstado);
+        success(`Cita ${nuevoEstado}`);
+        await loadCitas();
+      } catch (err) {
+        showError(err.message || 'Error al cambiar estado');
+      }
     }
   };
 
@@ -1383,6 +1498,24 @@ export function CategoriaDetailPage() {
     }
 
     const duracion = parseInt(servicioForm.duracion);
+    const precio = parseFloat(servicioForm.precio);
+    const porcentaje = servicioForm.porcentaje ? parseFloat(servicioForm.porcentaje) : 0;
+
+    if (duracion < 0) {
+      warning('La duración no puede ser negativa');
+      return;
+    }
+
+    if (precio < 0) {
+      warning('El precio no puede ser negativo');
+      return;
+    }
+
+    if (porcentaje < 0) {
+      warning('El porcentaje no puede ser negativo');
+      return;
+    }
+
     if (duracion % 15 !== 0) {
       warning('La duración debe ser múltiplo de 15 minutos (15, 30, 45, 60, etc.)');
       return;
@@ -1394,9 +1527,9 @@ export function CategoriaDetailPage() {
         nombre: servicioForm.nombre.trim(),
         descripcion: servicioForm.descripcion.trim(),
         duracion: duracion,
-        precio: parseFloat(servicioForm.precio),
+        precio: precio,
         categoria: categoria.id,
-        porcentaje: servicioForm.porcentaje ? parseFloat(servicioForm.porcentaje) : 0
+        porcentaje: porcentaje
       };
 
       await api.actualizarServicio(editingServicio.id, servicioData);
@@ -1419,7 +1552,7 @@ export function CategoriaDetailPage() {
       message: `¿Está seguro de que desea eliminar el servicio ${servicio.nombre}?`,
       confirmText: 'Eliminar',
       cancelText: 'Cancelar',
-      isDanger: true,
+      type: 'error', // Cambiado de isDanger a type
       onConfirm: async () => {
         try {
           setDeletingServicio(servicio.id);
@@ -1431,7 +1564,6 @@ export function CategoriaDetailPage() {
         } finally {
           setDeletingServicio(null);
         }
-        setShowConfirmacionPersonalizada(false);
       }
     });
     setShowConfirmacionPersonalizada(true);
@@ -1440,20 +1572,22 @@ export function CategoriaDetailPage() {
   const handleCancelEdit = () => {
     setEditingServicio(null);
     setShowEditServicioModal(false);
-    setServicioForm({ nombre: '', descripcion: '', duracion: '30', precio: '', porcentaje: '' });
+    setServicioForm({ nombre: '', descripcion: '', duracion: '', precio: '', porcentaje: '' });
   };
 
   const handleToggleEstadoServicio = async (servicio) => {
     const estadoActual = String(servicio.estado || 'activo').toUpperCase();
-    const nuevoEstado = estadoActual === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO';
-    const accion = nuevoEstado === 'ACTIVO' ? 'activar' : 'desactivar';
+    const esActivo = estadoActual === 'ACTIVO' || estadoActual === 'ACTIVA' || estadoActual === '1' || estadoActual === 'TRUE';
+
+    const accion = esActivo ? 'inactivar' : 'activar';
+    const nuevoEstado = esActivo ? 'INACTIVO' : 'ACTIVO';
 
     setConfirmacionData({
       title: `${accion.charAt(0).toUpperCase() + accion.slice(1)} servicio`,
-      message: `¿Está seguro de que desea ${accion} el servicio ${servicio.nombre}?`,
+      message: `¿Está seguro de que desea ${accion} el servicio "${servicio.nombre}"?`,
       confirmText: accion.charAt(0).toUpperCase() + accion.slice(1),
       cancelText: 'Cancelar',
-      isDanger: nuevoEstado === 'INACTIVO',
+      type: nuevoEstado === 'INACTIVO' ? 'warning' : 'success',
       onConfirm: async () => {
         try {
           await api.actualizarServicio(servicio.id, { estado: nuevoEstado.toLowerCase() });
@@ -1462,27 +1596,59 @@ export function CategoriaDetailPage() {
         } catch (err) {
           showError(err.message || `Error al ${accion} servicio`);
         }
-        setShowConfirmacionPersonalizada(false);
       }
     });
     setShowConfirmacionPersonalizada(true);
   };
 
   const formatFecha = (fechaString) => {
-    if (!fechaString) return new Date().toLocaleDateString('es-ES');
+    if (!fechaString) {
+      const now = new Date();
+      return `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
+    }
 
     try {
+      // Si ya tiene formato DD/MM/YYYY, devolverlo tal cual
+      if (fechaString.includes('/')) {
+        return fechaString;
+      }
+
+      // Para formato YYYY-MM-DD, extraer las partes directamente
+      const fechaParts = fechaString.split('T')[0].split('-');
+      if (fechaParts.length === 3) {
+        const [year, month, day] = fechaParts;
+        return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+      }
+
+      // Si viene en otro formato, usar Date pero forzar hora local
       const fecha = new Date(fechaString);
-      if (isNaN(fecha.getTime())) return new Date().toLocaleDateString('es-ES');
-      return fecha.toLocaleDateString('es-ES');
+      if (isNaN(fecha.getTime())) {
+        return 'Fecha inválida';
+      }
+
+      // Ajustar para compensar zona horaria
+      const fechaAjustada = new Date(fecha.getTime() + fecha.getTimezoneOffset() * 60000);
+      const dia = fechaAjustada.getDate().toString().padStart(2, '0');
+      const mes = (fechaAjustada.getMonth() + 1).toString().padStart(2, '0');
+      const año = fechaAjustada.getFullYear();
+
+      return `${dia}/${mes}/${año}`;
     } catch (error) {
-      return new Date().toLocaleDateString('es-ES');
+      console.error('Error formateando fecha:', error, fechaString);
+      return 'Fecha inválida';
     }
   };
 
   const getEstadoServicio = (servicio) => {
     if (servicio.estado !== undefined && servicio.estado !== null) {
-      return String(servicio.estado).toUpperCase();
+      const estado = String(servicio.estado).toUpperCase();
+      // Normalizar diferentes representaciones de estado activo/inactivo
+      if (estado === 'ACTIVO' || estado === 'ACTIVA' || estado === '1' || estado === 'TRUE' || estado === 'TRUE') {
+        return 'ACTIVO';
+      } else if (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') {
+        return 'INACTIVO';
+      }
+      return estado;
     }
     return 'ACTIVO';
   };
@@ -1553,7 +1719,6 @@ export function CategoriaDetailPage() {
   };
 
   const handleConfirmarCitaDefinitiva = async () => {
-    console.log('DEBUG: handleConfirmarCitaDefinitiva llamado, citaSeleccionada:', citaSeleccionada?.id);
     if (!citaSeleccionada) {
       showError('No hay cita seleccionada');
       return;
@@ -1565,11 +1730,6 @@ export function CategoriaDetailPage() {
       setShowConfirmModal(false);
 
       success('Cita confirmada exitosamente!');
-
-      // Esperar un poco antes de abrir el modal de ingreso
-      setTimeout(() => {
-        setShowIngresoModal(true);
-      }, 300);
 
       await loadCitas();
     } catch (err) {
@@ -1716,30 +1876,57 @@ export function CategoriaDetailPage() {
                   label="Duración (minutos) *"
                   type="number"
                   value={servicioForm.duracion}
-                  onChange={(e) => setServicioForm({ ...servicioForm, duracion: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Validar que no sea negativo
+                    if (parseInt(value) < 0) {
+                      warning('La duración no puede ser negativa');
+                      return;
+                    }
+                    setServicioForm({ ...servicioForm, duracion: value });
+                  }}
                   placeholder="30, 45, 60..."
                   min="15"
                   step="15"
                   required
+                  onWheel={(e) => e.target.blur()}
                 />
                 <Input
                   label="Precio *"
                   type="number"
                   value={servicioForm.precio}
-                  onChange={(e) => setServicioForm({ ...servicioForm, precio: e.target.value })}
-                  placeholder="0.00"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Validar que no sea negativo
+                    if (parseFloat(value) < 0) {
+                      warning('El precio no puede ser negativo');
+                      return;
+                    }
+                    setServicioForm({ ...servicioForm, precio: value });
+                  }}
+                  placeholder="000"
                   min="0"
                   step="0.01"
                   required
+                  onWheel={(e) => e.target.blur()}
                 />
                 <Input
                   label="Porcentaje comisión"
                   type="number"
                   value={servicioForm.porcentaje}
-                  onChange={(e) => setServicioForm({ ...servicioForm, porcentaje: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Validar que no sea negativo
+                    if (parseFloat(value) < 0) {
+                      warning('El porcentaje no puede ser negativo');
+                      return;
+                    }
+                    setServicioForm({ ...servicioForm, porcentaje: value });
+                  }}
                   placeholder="0"
                   min="0"
                   max="100"
+                  onWheel={(e) => e.target.blur()}
                 />
                 <div className="form-actions">
                   <Button
@@ -1784,30 +1971,57 @@ export function CategoriaDetailPage() {
                     label="Duración (minutos) *"
                     type="number"
                     value={servicioForm.duracion}
-                    onChange={(e) => setServicioForm({ ...servicioForm, duracion: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Validar que no sea negativo
+                      if (parseInt(value) < 0) {
+                        warning('La duración no puede ser negativa');
+                        return;
+                      }
+                      setServicioForm({ ...servicioForm, duracion: value });
+                    }}
                     placeholder="30, 45, 60..."
                     min="15"
                     step="15"
                     required
+                    onWheel={(e) => e.target.blur()}
                   />
                   <Input
                     label="Precio *"
                     type="number"
                     value={servicioForm.precio}
-                    onChange={(e) => setServicioForm({ ...servicioForm, precio: e.target.value })}
-                    placeholder="0.00"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Validar que no sea negativo
+                      if (parseFloat(value) < 0) {
+                        warning('El precio no puede ser negativo');
+                        return;
+                      }
+                      setServicioForm({ ...servicioForm, precio: value });
+                    }}
+                    placeholder="000"
                     min="0"
                     step="0.01"
                     required
+                    onWheel={(e) => e.target.blur()}
                   />
                   <Input
                     label="Porcentaje comisión"
                     type="number"
                     value={servicioForm.porcentaje}
-                    onChange={(e) => setServicioForm({ ...servicioForm, porcentaje: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Validar que no sea negativo
+                      if (parseFloat(value) < 0) {
+                        warning('El porcentaje no puede ser negativo');
+                        return;
+                      }
+                      setServicioForm({ ...servicioForm, porcentaje: value });
+                    }}
                     placeholder="0"
                     min="0"
                     max="100"
+                    onWheel={(e) => e.target.blur()}
                   />
                   <div className="form-actions">
                     <Button
@@ -1838,7 +2052,6 @@ export function CategoriaDetailPage() {
                     <tr>
                       <th>Servicio</th>
                       <th>Estado</th>
-                      <th>Fecha de Creación</th>
                       <th>Descripción</th>
                       <th>Duración</th>
                       {can('EDIT_SERVICIO') && <th>Acciones</th>}
@@ -1849,7 +2062,7 @@ export function CategoriaDetailPage() {
                     {serviciosFiltrados.map(servicio => {
                       const estado = getEstadoServicio(servicio);
                       const estadoInfo = getColorEstado(estado);
-                      const fechaCreacion = formatFecha(servicio.created_at || servicio.fecha_creacion || servicio.fechaCreacion);
+                      const esActivo = estado === 'ACTIVO';
 
                       return (
                         <tr key={servicio.id}>
@@ -1871,9 +2084,6 @@ export function CategoriaDetailPage() {
                             >
                               {estadoInfo.text}
                             </span>
-                          </td>
-                          <td style={{ fontWeight: '500', color: '#374151' }}>
-                            {fechaCreacion}
                           </td>
                           <td style={{ maxWidth: '200px' }}>
                             <span style={{
@@ -1898,27 +2108,44 @@ export function CategoriaDetailPage() {
                                   size="sm"
                                   onClick={() => handleEditServicio(servicio)}
                                   title={
-                                    estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE'
+                                    !esActivo
                                       ? 'No se puede editar servicios inactivos'
                                       : 'Editar servicio'
                                   }
                                   disabled={
                                     deletingServicio === servicio.id ||
-                                    estado === 'INACTIVO' ||
-                                    estado === 'INACTIVA' ||
-                                    estado === '0' ||
-                                    estado === 'FALSE'
+                                    !esActivo
                                   }
                                   style={{
                                     padding: '0.2rem 0.5rem',
                                     fontSize: '0.75rem',
                                     minWidth: 'auto',
-                                    opacity: (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') ? 0.5 : 1,
-                                    cursor: (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') ? 'not-allowed' : 'pointer'
+                                    opacity: !esActivo ? 0.5 : 1,
+                                    cursor: !esActivo ? 'not-allowed' : 'pointer'
                                   }}
                                 >
                                   <i className="bi bi-pencil"></i>
                                 </Button>
+
+                                <Button
+                                  variant={esActivo ? "warning" : "success"}
+                                  size="sm"
+                                  onClick={() => handleToggleEstadoServicio(servicio)}
+                                  title={esActivo ? 'Inactivar servicio' : 'Activar servicio'}
+                                  disabled={deletingServicio === servicio.id}
+                                  style={{
+                                    padding: '0.2rem 0.5rem',
+                                    fontSize: '0.75rem',
+                                    minWidth: 'auto'
+                                  }}
+                                >
+                                  {esActivo ? (
+                                    <i className="bi bi-pause-circle" title="Inactivar"></i>
+                                  ) : (
+                                    <i className="bi bi-play-circle" title="Activar"></i>
+                                  )}
+                                </Button>
+
                                 <Button
                                   variant="danger"
                                   size="sm"
@@ -2025,7 +2252,6 @@ export function CategoriaDetailPage() {
                   label="Teléfono"
                   value={clienteForm.telefono}
                   onChange={(e) => setClienteForm({ ...clienteForm, telefono: e.target.value })}
-                  placeholder="3001234567"
                 />
                 <div className="form-actions">
                   <Button variant="primary" disabled={saving}>
@@ -2084,7 +2310,6 @@ export function CategoriaDetailPage() {
                   label="Teléfono"
                   value={clienteForm.telefono}
                   onChange={(e) => setClienteForm({ ...clienteForm, telefono: e.target.value })}
-                  placeholder="3001234567"
                 />
                 <div className="form-actions">
                   <Button variant="primary" disabled={saving}>
@@ -2213,7 +2438,7 @@ export function CategoriaDetailPage() {
               </div>
             </div>
 
-            {/* Filtros de Agenda */}
+            {/* Filtros de Agenda MEJORADOS */}
             <div style={{
               display: 'flex',
               gap: '1rem',
@@ -2221,26 +2446,75 @@ export function CategoriaDetailPage() {
               marginBottom: '1.5rem',
               flexWrap: 'wrap'
             }}>
-              <Input
-                type="date"
-                value={fecha}
-                onChange={(e) => setFecha(e.target.value)}
-                style={{ width: '200px' }}
-              />
+              {/* Filtro por día */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#374151' }}>
+                  Filtro por día:
+                </label>
+                <Input
+                  type="date"
+                  value={fecha}
+                  onChange={(e) => {
+                    setFecha(e.target.value);
+                    setFiltroMes(''); // Limpiar filtro por mes cuando se selecciona un día
+                  }}
+                  style={{ width: '200px' }}
+                />
+              </div>
 
-              <Select
-                value={filtroEstado}
-                onChange={(e) => setFiltroEstado(e.target.value)}
-                style={{ width: '200px' }}
-                options={[
-                  { id: 'todas', nombre: 'Todas las citas' },
-                  { id: 'pendiente', nombre: 'Pendientes' },
-                  { id: 'confirmada', nombre: 'Confirmadas' },
-                  { id: 'completada', nombre: 'Completadas' },
-                  { id: 'cancelada', nombre: 'Canceladas' }
-                ]}
-              />
+              {/* Filtro por mes */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#374151' }}>
+                  O filtrar por mes:
+                </label>
+                <Input
+                  type="month"
+                  value={filtroMes}
+                  onChange={(e) => {
+                    setFiltroMes(e.target.value);
+                    setFecha(new Date().toISOString().slice(0, 10)); // Resetear fecha día
+                  }}
+                  style={{ width: '200px' }}
+                  placeholder="Seleccionar mes"
+                />
+              </div>
 
+              {/* Filtro por estado */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#374151' }}>
+                  Estado:
+                </label>
+                <Select
+                  value={filtroEstado}
+                  onChange={(e) => setFiltroEstado(e.target.value)}
+                  style={{ width: '200px' }}
+                  options={[
+                    { id: 'todas', nombre: 'Todas las citas' },
+                    { id: 'pendiente', nombre: 'Pendientes' },
+                    { id: 'confirmada', nombre: 'Confirmadas' },
+                    { id: 'completada', nombre: 'Completadas' },
+                    { id: 'cancelada', nombre: 'Canceladas' }
+                  ]}
+                />
+              </div>
+
+              {/* Botón para limpiar filtros */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'transparent' }}>
+                  Limpiar
+                </label>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setFiltroMes('');
+                    setFecha(new Date().toISOString().slice(0, 10));
+                    setFiltroEstado('todas');
+                  }}
+                  style={{ width: '120px' }}
+                >
+                  Limpiar Filtros
+                </Button>
+              </div>
             </div>
 
             <Modal show={showCitaModal} onClose={() => setShowCitaModal(false)}>
@@ -2248,6 +2522,18 @@ export function CategoriaDetailPage() {
                 Agendar Cita
               </h4>
               <form onSubmit={handleCreateCita} className="form-layout">
+                <Input
+                  label="Fecha de la cita *"
+                  type="date"
+                  value={filtroMes ? new Date().toISOString().slice(0, 10) : fecha}
+                  onChange={(e) => {
+                    if (!filtroMes) {
+                      setFecha(e.target.value);
+                    }
+                  }}
+                  required
+                />
+
                 <Input
                   label="Hora *"
                   type="time"
@@ -2272,7 +2558,7 @@ export function CategoriaDetailPage() {
                       }
                     }
                   }}
-                  options={servicios}
+                  options={servicios.filter(servicio => getEstadoServicio(servicio) === 'ACTIVO')}
                   required
                 />
                 <Input
@@ -2311,7 +2597,6 @@ export function CategoriaDetailPage() {
               </form>
             </Modal>
 
-            {/* Modal para Editar Cita */}
             <Modal show={showEditCitaModal} onClose={() => setShowEditCitaModal(false)}>
               <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', color: '#333' }}>
                 Editar Cita
@@ -2335,7 +2620,7 @@ export function CategoriaDetailPage() {
                   label="Servicio *"
                   value={editCitaForm.servicio}
                   onChange={(e) => setEditCitaForm({ ...editCitaForm, servicio: e.target.value })}
-                  options={servicios}
+                  options={servicios.filter(servicio => getEstadoServicio(servicio) === 'ACTIVO')}
                   required
                 />
                 <Input
@@ -2484,17 +2769,20 @@ export function CategoriaDetailPage() {
           setCitaSeleccionada(null);
           loadCitas();
         }}
+        servicios={servicios}
       />
 
-      <ModalConfirmacionPersonalizado
+      <AlertSimple
         show={showConfirmacionPersonalizada}
         onClose={() => setShowConfirmacionPersonalizada(false)}
         onConfirm={confirmacionData.onConfirm}
+        onCancel={() => setShowConfirmacionPersonalizada(false)}
         title={confirmacionData.title}
         message={confirmacionData.message}
+        type={confirmacionData.type || 'info'}
         confirmText={confirmacionData.confirmText}
         cancelText={confirmacionData.cancelText}
-        isDanger={confirmacionData.isDanger}
+        showCancel={true}
       />
     </MainLayout>
   );
