@@ -999,11 +999,18 @@ export function CategoriaDetailPage() {
         loadCitas();
       }
     }
-  }, [fecha, categoria, activeTab, filtroMes, filtroEstado]); // Agrega filtroMes
+  }, [fecha, categoria, activeTab, filtroMes, filtroEstado]); 
   const loadEmpleados = async () => {
     try {
       const empleadosRes = await api.getUsuarios();
-      setEmpleados(empleadosRes.data || []);
+      const empleadosActivos = (empleadosRes.data || []).filter(empleado => {
+        const esEmpleado = empleado.rolInfo?.nombre === 'Empleado';
+        const estaActivo = empleado.estado === 1 || empleado.estado === '1' || empleado.estado === 'ACTIVO';
+
+        return esEmpleado && estaActivo;
+      });
+
+      setEmpleados(empleadosActivos);
     } catch (error) {
       console.error('Error al cargar empleados:', error);
     }
@@ -1564,7 +1571,7 @@ export function CategoriaDetailPage() {
       message: `¿Está seguro de que desea eliminar el servicio ${servicio.nombre}?`,
       confirmText: 'Eliminar',
       cancelText: 'Cancelar',
-      type: 'error', 
+      type: 'error',
       onConfirm: async () => {
         try {
           setDeletingServicio(servicio.id);
@@ -2357,7 +2364,6 @@ export function CategoriaDetailPage() {
                           <th>Documento</th>
                           <th>Tipo</th>
                           <th>Teléfono</th>
-                          <th>Estado</th>
                           <th>Fecha Registro</th>
                           <th>Acciones</th>
                         </tr>
@@ -2380,22 +2386,6 @@ export function CategoriaDetailPage() {
                                 </span>
                               </td>
                               <td>{cliente.telefono || '-'}</td>
-                              <td>
-                                <span
-                                  style={{
-                                    padding: '0.35rem 0.9rem',
-                                    borderRadius: '20px',
-                                    fontSize: '0.75rem',
-                                    fontWeight: '700',
-                                    backgroundColor: estadoInfo.background,
-                                    color: estadoInfo.color,
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.5px'
-                                  }}
-                                >
-                                  {estadoInfo.text}
-                                </span>
-                              </td>
                               <td style={{ fontWeight: '500', color: '#374151', fontSize: '0.85rem' }}>
                                 {fechaRegistro}
                               </td>
