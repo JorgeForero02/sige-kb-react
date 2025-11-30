@@ -1,7 +1,8 @@
 ﻿import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { logger } from '../services/logger';
-import { MainLayout } from '../components/layout/MainLayout';
+import { Header } from '../components/layout/Header';
+import { Sidebar } from '../components/layout/Sidebar'
 import { Card, Button, Input, Loading, Empty } from '../components/common/Components';
 import { AlertSimple } from '../components/common/AlertSimple';
 import { useAlert } from '../hooks/useAlert';
@@ -36,7 +37,7 @@ function Modal({ show, onClose, children, title }) {
         border: '2px solid #F8D7E8',
         position: 'relative'
       }}>
-        <button 
+        <button
           onClick={onClose}
           style={{
             position: 'absolute',
@@ -78,7 +79,7 @@ export function RolesPage() {
     nombre: '',
     descripcion: ''
   });
-  
+
   // Estado para confirmación
   const [showConfirmacion, setShowConfirmacion] = useState(false);
   const [confirmacionData, setConfirmacionData] = useState({
@@ -90,8 +91,9 @@ export function RolesPage() {
     cancelText: 'Cancelar'
   });
   const [confirmLoading, setConfirmLoading] = useState(false);
-  
+
   const { alert, success, error: showError, warning, clearAlert } = useAlert();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     fetchRoles();
@@ -157,7 +159,7 @@ export function RolesPage() {
     } catch (err) {
       // Recargar roles para sincronizar con la BD
       await fetchRoles();
-      
+
       // Mostrar error específico
       if (err.status === 409) {
         showError('Ya existe un rol con ese nombre. Intenta con otro nombre.');
@@ -224,84 +226,97 @@ export function RolesPage() {
   };
 
   return (
-    <MainLayout title="Gestión de Roles">
-      {alert && (
-        <AlertSimple
-          show={!!alert}
-          title={alert.title}
-          message={alert.message}
-          type={alert.type}
-          confirmText="Aceptar"
-          onConfirm={clearAlert}
-          onClose={clearAlert}
-        />
-      )}
+    <div className="empleados-page">
+      <Header />
+      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-      <div className="page-header">
-        <h4 style={{margin: 0, color: '#9CA3AF', fontSize: '0.9rem', textTransform: 'uppercase', fontWeight: '700'}}>
-          Total: {roles.length} roles
-        </h4>
-        <Button onClick={handleOpenModal}>
-          <i className="bi bi-plus-circle"></i> Nuevo Rol
-        </Button>
-      </div>
+      <main className="main-content">
+        <button
+          className="hamburger content-hamburger"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          aria-label="Toggle menu"
+        >
+          <i className="bi bi-list"></i>
+        </button>
+        {alert && (
+          <AlertSimple
+            show={!!alert}
+            title={alert.title}
+            message={alert.message}
+            type={alert.type}
+            confirmText="Aceptar"
+            onConfirm={clearAlert}
+            onClose={clearAlert}
+          />
+        )}
 
-      {/* Modal para el formulario */}
-      <Modal show={showModal} onClose={handleCloseModal}>
-        <h4 style={{
-          marginBottom: '1.5rem', 
-          fontWeight: '700', 
-          fontSize: '1.5rem', 
-          color: '#E63E6D',
-          textAlign: 'center'
-        }}>
-          <i className="bi bi-shield-check"></i> {editingId ? 'Editar Rol' : 'Crear Rol'}
-        </h4>
-        <form onSubmit={handleSubmit} className="form-layout">
-          <Input
-            label="Nombre "
-            value={formData.nombre}
-            onChange={(e) => setFormData({...formData, nombre: e.target.value})}
-            placeholder="Ej: Recepcionista"
-            required
-            autoFocus
-          />
-          <Input
-            label="Descripción"
-            value={formData.descripcion}
-            onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
-            placeholder="Descripción del rol"
-          />
-          <div className="form-actions">
-            <Button variant="primary" disabled={saving}>
-              {saving ? 'Guardando...' : editingId ? 'Actualizar' : 'Crear'}
-            </Button>
-            <Button variant="secondary" onClick={handleCloseModal}>
-              Cancelar
-            </Button>
+
+        <div className="page-header">
+          <div>
+            <h4 className="dashboard-title">Roles</h4>
           </div>
-        </form>
-      </Modal>
+          <h4 style={{ margin: 0, color: '#9CA3AF', fontSize: '0.9rem', textTransform: 'uppercase', fontWeight: '700' }}>
+            Total: {roles.length} roles
+          </h4>
+          <Button onClick={handleOpenModal}>
+            <i className="bi bi-plus-circle"></i> Nuevo Rol
+          </Button>
+        </div>
 
-      {/* Modal de confirmación */}
-      {showConfirmacion && (
-        <AlertSimple
-          show={showConfirmacion}
-          title={confirmacionData.title}
-          message={confirmacionData.message}
-          type={confirmacionData.type}
-          confirmText={confirmacionData.confirmText}
-          cancelText={confirmacionData.cancelText}
-          showCancel
-          onConfirm={handleConfirmAction}
-          onCancel={handleCancelConfirm}
-          onClose={handleCancelConfirm}
-          loading={confirmLoading}
-          closeOnOverlayClick={!confirmLoading}
-        />
-      )}
+        {/* Modal para el formulario */}
+        <Modal show={showModal} onClose={handleCloseModal}>
+          <h4 style={{
+            marginBottom: '1.5rem',
+            fontWeight: '700',
+            fontSize: '1.5rem',
+            color: '#E63E6D',
+            textAlign: 'center'
+          }}>
+            <i className="bi bi-shield-check"></i> {editingId ? 'Editar Rol' : 'Crear Rol'}
+          </h4>
+          <form onSubmit={handleSubmit} className="form-layout">
+            <Input
+              label="Nombre "
+              value={formData.nombre}
+              onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+              placeholder="Ej: Recepcionista"
+              required
+              autoFocus
+            />
+            <Input
+              label="Descripción"
+              value={formData.descripcion}
+              onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+              placeholder="Descripción del rol"
+            />
+            <div className="form-actions">
+              <Button variant="primary" disabled={saving}>
+                {saving ? 'Guardando...' : editingId ? 'Actualizar' : 'Crear'}
+              </Button>
+              <Button variant="secondary" onClick={handleCloseModal}>
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </Modal>
 
-      <Card>
+        {/* Modal de confirmación */}
+        {showConfirmacion && (
+          <AlertSimple
+            show={showConfirmacion}
+            title={confirmacionData.title}
+            message={confirmacionData.message}
+            type={confirmacionData.type}
+            confirmText={confirmacionData.confirmText}
+            cancelText={confirmacionData.cancelText}
+            showCancel
+            onConfirm={handleConfirmAction}
+            onCancel={handleCancelConfirm}
+            onClose={handleCancelConfirm}
+            loading={confirmLoading}
+            closeOnOverlayClick={!confirmLoading}
+          />
+        )}
         <div className="card-header">
           <h3 className="card-title">
             <i className="bi bi-list-check"></i>
@@ -336,18 +351,18 @@ export function RolesPage() {
                     </td>
                     <td className="align-middle">
                       <div className="d-flex gap-1 justify-content-center">
-                        <Button 
-                          onClick={() => handleEdit(rol)} 
-                          variant="outline-primary" 
+                        <Button
+                          onClick={() => handleEdit(rol)}
+                          variant="outline-primary"
                           size="sm"
                           className="btn-sm"
                           title="Editar rol"
                         >
                           <i className="bi bi-pencil"></i> Editar
                         </Button>
-                        <Button 
-                          onClick={() => handleDeleteConfirm(rol)} 
-                          variant="outline-danger" 
+                        <Button
+                          onClick={() => handleDeleteConfirm(rol)}
+                          variant="outline-danger"
                           size="sm"
                           className="btn-sm"
                           title="Eliminar rol"
@@ -364,7 +379,7 @@ export function RolesPage() {
             <Empty message="No hay roles registrados" />
           )}
         </div>
-      </Card>
-    </MainLayout>
+      </main>
+    </div>
   );
 }
