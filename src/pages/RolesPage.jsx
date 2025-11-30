@@ -105,8 +105,12 @@ export function RolesPage() {
       const result = await api.getRoles();
       console.log('Result from getRoles:', result);
       const rolesData = result.data || result || [];
-      setRoles(Array.isArray(rolesData) ? rolesData : []);
-      logger.success('Roles cargados', `${Array.isArray(rolesData) ? rolesData.length : 0} roles`);
+      const rolesActivos = Array.isArray(rolesData)
+        ? rolesData.filter(rol => rol.estado === 1 || rol.estado === '1')
+        : [];
+
+      setRoles(rolesActivos);
+      logger.success('Roles cargados', `${rolesActivos.length} roles`);
     } catch (err) {
       logger.error('Error al cargar roles', err.message);
       showError(err.message || 'Error al cargar roles');
@@ -171,29 +175,74 @@ export function RolesPage() {
     setSaving(false);
   };
 
-  const handleDeleteConfirm = (rol) => {
-    setConfirmacionData({
-      title: 'Eliminar Rol',
-      message: `¿Está seguro de que desea eliminar el rol "${rol.nombre}"?`,
-      action: async () => {
-        try {
-          await api.request(`/roles/${rol.id}`, {
-            method: 'DELETE'
-          });
+  const handleDeleteConfirm = async (rol) => {
+    try {
+      const usuariosResponse = await api.getUsuarios();
+      const todosUsuarios = usuariosResponse.data || [];
 
-          success('Rol eliminado exitosamente!', { title: 'Rol eliminado', autoHide: false });
-          await fetchRoles();
-        } catch (err) {
-          logger.error('Error al eliminar', err.message);
-          showError(err.message || 'Error al eliminar rol');
-          throw err;
-        }
-      },
-      type: 'warning',
-      confirmText: 'Confirmar',
-      cancelText: 'Cancelar'
-    });
-    setShowConfirmacion(true);
+      if (!Array.isArray(todosUsuarios)) {
+        throw new Error('La respuesta de usuarios no es un array válido');
+      }
+
+      const usuariosConEsteRol = todosUsuarios.filter(usuario =>
+        usuario.rol === rol.id || usuario.rol_id === rol.id
+      );
+
+      const cantidadUsuarios = usuariosConEsteRol.length;
+
+      setConfirmacionData({
+        title: 'Eliminar Rol',
+        message: `¿Está seguro de que desea eliminar el rol "${rol.nombre}"?
+  
+${cantidadUsuarios > 0
+            ? `${cantidadUsuarios} usuario(s) serán automáticamente inactivados.`
+            : ' No hay usuarios asignados a este rol.'}`,
+        action: async () => {
+          try {
+            if (cantidadUsuarios > 0) {
+              const inactivarPromises = usuariosConEsteRol.map(usuario =>
+                api.cambiarEstadoUsuario(usuario.id, 0)
+              );
+
+              await Promise.all(inactivarPromises);
+            }
+
+            await api.request(`/roles/${rol.id}`, {
+              method: 'PUT',
+              body: JSON.stringify({ estado: 0 })
+            });
+
+            const mensajeExito = cantidadUsuarios > 0
+              ? `Rol eliminado exitosamente! ${cantidadUsuarios} usuario(s) fueron inactivados.`
+              : 'Rol eliminado exitosamente!';
+
+            success(mensajeExito, {
+              title: 'Rol eliminado',
+              autoHide: false
+            });
+
+            await fetchRoles();
+
+          } catch (err) {
+            if (err.status === 401) {
+              showError('Error de autenticación. Por favor, inicie sesión nuevamente.');
+            } else {
+              logger.error('Error al eliminar rol', err.message);
+              showError(err.message || 'Error al eliminar rol');
+            }
+            throw err;
+          }
+        },
+        type: cantidadUsuarios > 0 ? 'warning' : 'info',
+        confirmText: cantidadUsuarios > 0 ? 'Eliminar e Inactivar' : 'Eliminar',
+        cancelText: 'Cancelar'
+      });
+      setShowConfirmacion(true);
+
+    } catch (error) {
+      showError('Error al verificar usuarios del rol');
+      logger.error('Error al obtener usuarios:', error);
+    }
   };
 
   const handleConfirmAction = async () => {
@@ -203,7 +252,6 @@ export function RolesPage() {
       await confirmacionData.action();
       setShowConfirmacion(false);
     } catch (err) {
-      // el error ya se muestra usando showError
     }
     setConfirmLoading(false);
   };

@@ -1,10 +1,12 @@
 ﻿import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { AccessDenied } from '../common/AccessDenied'; 
 
 export function ProtectedRoute({ children }) {
   const { user, rol, isAuthenticated, loading } = useAuth();
   const location = useLocation();
+  const ROLES_PERMITIDOS = ['Administrador', 'Gerente', 'Empleado'];
 
   if (loading) {
     return (
@@ -21,9 +23,13 @@ export function ProtectedRoute({ children }) {
     return <Navigate to="/login" replace />;
   }
 
-  const currentPath = location.pathname;
-
   const userRol = rol || user?.rol || user?.rolInfo?.nombre;
+
+  if (!ROLES_PERMITIDOS.includes(userRol)) {
+    return <AccessDenied />;
+  }
+
+  const currentPath = location.pathname;
 
   if (currentPath === '/') {
     if (userRol === 'Empleado') {
