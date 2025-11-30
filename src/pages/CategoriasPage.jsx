@@ -1,7 +1,8 @@
 ﻿import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { logger } from '../services/logger';
-import { MainLayout } from '../components/layout/MainLayout';
+import { Header } from '../components/layout/Header';
+import { Sidebar } from '../components/layout/Sidebar';
 import { Card, Button, Input, Loading, Empty } from '../components/common/Components';
 import { AlertSimple } from '../components/common/AlertSimple';
 import { useAlert } from '../hooks/useAlert';
@@ -100,6 +101,7 @@ function Modal({ show, onClose, children, title, size = 'md' }) {
 }
 
 export function CategoriasPage() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [categorias, setCategorias] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -126,11 +128,22 @@ export function CategoriasPage() {
   });
   const [confirmLoading, setConfirmLoading] = useState(false);
 
+  // Verificación de permisos
   if (!can('VIEW_CATEGORIAS')) {
     return (
-      <MainLayout title="Categorias">
-        <AlertSimple message="No tienes permiso para acceder a esta seccion" type="error" />
-      </MainLayout>
+      <div className="categorias-page">
+        <Header />
+        <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+        <main className="main-content">
+          <AlertSimple
+            show={true}
+            type="error"
+            title="Acceso denegado"
+            message="No tienes permiso para acceder a esta sección"
+            confirmText="Aceptar"
+          />
+        </main>
+      </div>
     );
   }
 
@@ -385,334 +398,349 @@ export function CategoriasPage() {
   );
 
   return (
-    <MainLayout title="Categorías">
-      {alert && (
-        <AlertSimple
-          show={!!alert}
-          title={alert.title}
-          message={alert.message}
-          type={alert.type}
-          confirmText="Aceptar"
-          onConfirm={clearAlert}
-          onClose={clearAlert}
-        />
-      )}
-      {confirmacion.show && (
-        <AlertSimple
-          show={confirmacion.show}
-          title={confirmacion.title}
-          message={confirmacion.message}
-          type={confirmacion.type}
-          confirmText={confirmacion.confirmText}
-          cancelText={confirmacion.cancelText}
-          showCancel={confirmacion.showCancel}
-          onConfirm={executeConfirmacion}
-          onCancel={closeConfirmacion}
-          onClose={closeConfirmacion}
-          loading={confirmLoading}
-          closeOnOverlayClick={!confirmLoading}
-        />
-      )}
-      {can('CREATE_CATEGORIA') && (
-        <Button onClick={handleOpenModal}> + Nueva Categoría</Button>
-      )}
+    <div className="categorias-page">
+      <Header />
+      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-      <div className="page-header">
-        <div>
-          <h4 className='categorias-main-title'>Listado de Categorías</h4>
-          <p style={{ color: '#6B7280', margin: '0.5rem 0 0 0' }}>
-            Total: {categorias.length} categorías
-          </p>
-        </div>
-      </div>
+      <main className="main-content">
+        <button
+          className="hamburger content-hamburger"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          aria-label="Toggle menu"
+        >
+          <i className="bi bi-list"></i>
+        </button>
 
-      {/* Barra de búsqueda */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <Input
-          placeholder="Buscar por categoría..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ maxWidth: '300px' }}
-        />
-      </div>
-      <Modal
-        show={showModal}
-        onClose={handleCloseModal}
-        title="Agregar Categoría"
-        size="sm"
-      >
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <label style={{
-              fontWeight: '600',
-              color: '#f74780',
-              fontSize: '0.9rem',
-              display: 'block',
-              marginBottom: '0.25rem'
-            }}>
-              Nombre *
-            </label>
-            <input
-              type="text"
-              value={formData.nombre}
-              onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-              placeholder="Nombre de la categoría"
-              required
-              autoFocus
-              style={{
-                padding: '0.75rem 1rem',
-                border: '2px solid rgba(247, 71, 128, 0.3)',
-                borderRadius: '8px',
-                fontSize: '0.95rem',
-                width: '100%',
-                boxSizing: 'border-box',
-                fontFamily: 'inherit'
-              }}
-            />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <label style={{
-              fontWeight: '600',
-              color: '#f74780',
-              fontSize: '0.9rem',
-              display: 'block',
-              marginBottom: '0.25rem'
-            }}>
-              Descripción
-            </label>
-            <textarea
-              value={formData.descripcion}
-              onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-              placeholder="Descripción de la categoría"
-              rows="3"
-              style={{
-                padding: '0.75rem 1rem',
-                border: '2px solid rgba(247, 71, 128, 0.3)',
-                borderRadius: '8px',
-                fontSize: '0.95rem',
-                width: '100%',
-                boxSizing: 'border-box',
-                fontFamily: 'inherit',
-                resize: 'vertical'
-              }}
-            />
-          </div>
-          <div className="modal-actions">
-            <Button variant="primary" disabled={saving} type="submit">
-              {saving ? 'Guardando...' : 'Crear Categoría'}
-            </Button>
-            <Button variant="secondary" onClick={handleCloseModal} type="button">
-              Cancelar
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Modal para editar categoría */}
-      <Modal
-        show={showEditModal}
-        onClose={handleCloseEditModal}
-        title="Editar Categoría"
-        size="sm"
-      >
-        <form onSubmit={handleUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <label style={{
-              fontWeight: '600',
-              color: '#f74780',
-              fontSize: '0.9rem',
-              display: 'block',
-              marginBottom: '0.25rem'
-            }}>
-              Nombre *
-            </label>
-            <input
-              type="text"
-              value={formData.nombre}
-              onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-              placeholder="Nombre de la categoría"
-              required
-              autoFocus
-              style={{
-                padding: '0.75rem 1rem',
-                border: '2px solid rgba(247, 71, 128, 0.3)',
-                borderRadius: '8px',
-                fontSize: '0.95rem',
-                width: '100%',
-                boxSizing: 'border-box',
-                fontFamily: 'inherit'
-              }}
-            />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <label style={{
-              fontWeight: '600',
-              color: '#f74780',
-              fontSize: '0.9rem',
-              display: 'block',
-              marginBottom: '0.25rem'
-            }}>
-              Descripción
-            </label>
-            <textarea
-              value={formData.descripcion}
-              onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-              placeholder="Descripción de la categoría"
-              rows="3"
-              style={{
-                padding: '0.75rem 1rem',
-                border: '2px solid rgba(247, 71, 128, 0.3)',
-                borderRadius: '8px',
-                fontSize: '0.95rem',
-                width: '100%',
-                boxSizing: 'border-box',
-                fontFamily: 'inherit',
-                resize: 'vertical'
-              }}
-            />
-          </div>
-          <div className="modal-actions">
-            <Button variant="primary" disabled={saving} type="submit">
-              {saving ? 'Guardando...' : 'Actualizar Categoría'}
-            </Button>
-            <Button variant="secondary" onClick={handleCloseEditModal} type="button">
-              Cancelar
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Tabla de categorías */}
-      <div className="table-container">
-        {loading ? (
-          <Loading />
-        ) : categoriasFiltradas.length > 0 ? (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Categoría</th>
-                <th>Estado</th>
-                <th>Fecha de Creación</th>
-                <th>Descripción</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {categoriasFiltradas.map(categoria => {
-                const estado = getEstadoCategoria(categoria);
-                const estadoInfo = getColorEstado(estado);
-                const fechaCreacion = formatFecha(categoria.created_at || categoria.fecha_creacion || categoria.fechaCreacion);
-
-                // Determinar si la categoría está inactiva
-                const isInactiva = estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE';
-                // Determinar si la categoría está activa
-                const isActiva = estado === 'ACTIVO' || estado === 'ACTIVA' || estado === '1' || estado === 'TRUE';
-
-                return (
-                  <tr key={categoria.id}>
-                    <td>
-                      <strong>{categoria.nombre}</strong>
-                    </td>
-                    <td>
-                      <span
-                        style={{
-                          padding: '0.35rem 0.9rem',
-                          borderRadius: '20px',
-                          fontSize: '0.75rem',
-                          fontWeight: '700',
-                          backgroundColor: estadoInfo.background,
-                          color: estadoInfo.color,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.5px'
-                        }}
-                      >
-                        {estadoInfo.text}
-                      </span>
-                    </td>
-                    <td style={{ fontWeight: '500', color: '#374151' }}>
-                      {fechaCreacion}
-                    </td>
-                    <td style={{ maxWidth: '300px' }}>
-                      <span style={{
-                        color: '#6B7280',
-                        fontSize: '0.85rem',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden'
-                      }}>
-                        {categoria.descripcion || 'Sin descripción'}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="table-actions">
-                        {can('EDIT_CATEGORIA') && (
-                          <Button
-                            variant="secondary"
-                            className="btn-sm"
-                            onClick={() => handleEdit(categoria)}
-                            title={isInactiva ? 'No se puede editar categorías inactivas' : 'Editar categoría'}
-                            disabled={isInactiva}
-                            style={{
-                              opacity: isInactiva ? 0.5 : 1,
-                              cursor: isInactiva ? 'not-allowed' : 'pointer'
-                            }}
-                          >
-                            <i className="bi bi-pencil"></i>
-                            <span>Editar</span>
-                          </Button>
-                        )}
-                        {can('EDIT_CATEGORIA') && (
-                          <>
-                            {/* Botón Activar - solo visible para categorías inactivas */}
-                            {isInactiva && (
-                              <Button
-                                variant="primary"
-                                className="btn-sm"
-                                onClick={() => handleToggleEstado(categoria)}
-                                title="Activar categoría"
-                              >
-                                <i className="bi bi-play-circle"></i>
-                                <span>Activar</span>
-                              </Button>
-                            )}
-
-                            {/* Botón Desactivar - solo visible para categorías activas */}
-                            {isActiva && (
-                              <Button
-                                variant="secondary"
-                                className="btn-sm"
-                                onClick={() => handleToggleEstado(categoria)}
-                                title="Desactivar categoría"
-                              >
-                                <i className="bi bi-pause-circle"></i>
-                                <span>Desactivar</span>
-                              </Button>
-                            )}
-                          </>
-                        )}
-                        {can('DELETE_CATEGORIA') && (
-                          <Button
-                            variant="danger"
-                            className="btn-sm"
-                            onClick={() => handleDelete(categoria)}
-                            title="Eliminar categoría"
-                          >
-                            <i className="bi bi-trash"></i>
-                            <span>Eliminar</span>
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        ) : (
-          <Empty message={searchTerm ? "No se encontraron categorías" : "No hay categorías registradas"} />
+        {alert && (
+          <AlertSimple
+            show={!!alert}
+            title={alert.title}
+            message={alert.message}
+            type={alert.type}
+            confirmText="Aceptar"
+            onConfirm={clearAlert}
+            onClose={clearAlert}
+          />
         )}
-      </div>
-    </MainLayout>
+        {confirmacion.show && (
+          <AlertSimple
+            show={confirmacion.show}
+            title={confirmacion.title}
+            message={confirmacion.message}
+            type={confirmacion.type}
+            confirmText={confirmacion.confirmText}
+            cancelText={confirmacion.cancelText}
+            showCancel={confirmacion.showCancel}
+            onConfirm={executeConfirmacion}
+            onCancel={closeConfirmacion}
+            onClose={closeConfirmacion}
+            loading={confirmLoading}
+            closeOnOverlayClick={!confirmLoading}
+          />
+        )}
+
+        <div className="page-header">
+          <div>
+            <h4 className='dashboard-title'>Categorías</h4>
+            <p style={{ color: '#6B7280', margin: '0.5rem 0 0 0' }}>
+              Total: {categorias.length} categorías
+            </p>
+          </div>
+          {can('CREATE_CATEGORIA') && (
+            <Button onClick={handleOpenModal}> + Nueva Categoría</Button>
+          )}
+        </div>
+
+        {/* Barra de búsqueda */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <Input
+            placeholder="Buscar por categoría..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ maxWidth: '300px' }}
+          />
+        </div>
+
+        {/* Modal para crear categoría */}
+        <Modal
+          show={showModal}
+          onClose={handleCloseModal}
+          title="Agregar Categoría"
+          size="sm"
+        >
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label style={{
+                fontWeight: '600',
+                color: '#f74780',
+                fontSize: '0.9rem',
+                display: 'block',
+                marginBottom: '0.25rem'
+              }}>
+                Nombre *
+              </label>
+              <input
+                type="text"
+                value={formData.nombre}
+                onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                placeholder="Nombre de la categoría"
+                required
+                autoFocus
+                style={{
+                  padding: '0.75rem 1rem',
+                  border: '2px solid rgba(247, 71, 128, 0.3)',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  fontFamily: 'inherit'
+                }}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label style={{
+                fontWeight: '600',
+                color: '#f74780',
+                fontSize: '0.9rem',
+                display: 'block',
+                marginBottom: '0.25rem'
+              }}>
+                Descripción
+              </label>
+              <textarea
+                value={formData.descripcion}
+                onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+                placeholder="Descripción de la categoría"
+                rows="3"
+                style={{
+                  padding: '0.75rem 1rem',
+                  border: '2px solid rgba(247, 71, 128, 0.3)',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  fontFamily: 'inherit',
+                  resize: 'vertical'
+                }}
+              />
+            </div>
+            <div className="modal-actions">
+              <Button variant="primary" disabled={saving} type="submit">
+                {saving ? 'Guardando...' : 'Crear Categoría'}
+              </Button>
+              <Button variant="secondary" onClick={handleCloseModal} type="button">
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </Modal>
+
+        {/* Modal para editar categoría */}
+        <Modal
+          show={showEditModal}
+          onClose={handleCloseEditModal}
+          title="Editar Categoría"
+          size="sm"
+        >
+          <form onSubmit={handleUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label style={{
+                fontWeight: '600',
+                color: '#f74780',
+                fontSize: '0.9rem',
+                display: 'block',
+                marginBottom: '0.25rem'
+              }}>
+                Nombre *
+              </label>
+              <input
+                type="text"
+                value={formData.nombre}
+                onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                placeholder="Nombre de la categoría"
+                required
+                autoFocus
+                style={{
+                  padding: '0.75rem 1rem',
+                  border: '2px solid rgba(247, 71, 128, 0.3)',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  fontFamily: 'inherit'
+                }}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label style={{
+                fontWeight: '600',
+                color: '#f74780',
+                fontSize: '0.9rem',
+                display: 'block',
+                marginBottom: '0.25rem'
+              }}>
+                Descripción
+              </label>
+              <textarea
+                value={formData.descripcion}
+                onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+                placeholder="Descripción de la categoría"
+                rows="3"
+                style={{
+                  padding: '0.75rem 1rem',
+                  border: '2px solid rgba(247, 71, 128, 0.3)',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  fontFamily: 'inherit',
+                  resize: 'vertical'
+                }}
+              />
+            </div>
+            <div className="modal-actions">
+              <Button variant="primary" disabled={saving} type="submit">
+                {saving ? 'Guardando...' : 'Actualizar Categoría'}
+              </Button>
+              <Button variant="secondary" onClick={handleCloseEditModal} type="button">
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </Modal>
+
+        {/* Tabla de categorías */}
+        <div className="table-container">
+          {loading ? (
+            <Loading />
+          ) : categoriasFiltradas.length > 0 ? (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Categoría</th>
+                  <th>Estado</th>
+                  <th>Fecha de Creación</th>
+                  <th>Descripción</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {categoriasFiltradas.map(categoria => {
+                  const estado = getEstadoCategoria(categoria);
+                  const estadoInfo = getColorEstado(estado);
+                  const fechaCreacion = formatFecha(categoria.created_at || categoria.fecha_creacion || categoria.fechaCreacion);
+
+                  // Determinar si la categoría está inactiva
+                  const isInactiva = estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE';
+                  // Determinar si la categoría está activa
+                  const isActiva = estado === 'ACTIVO' || estado === 'ACTIVA' || estado === '1' || estado === 'TRUE';
+
+                  return (
+                    <tr key={categoria.id}>
+                      <td>
+                        <strong>{categoria.nombre}</strong>
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            padding: '0.35rem 0.9rem',
+                            borderRadius: '20px',
+                            fontSize: '0.75rem',
+                            fontWeight: '700',
+                            backgroundColor: estadoInfo.background,
+                            color: estadoInfo.color,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                          }}
+                        >
+                          {estadoInfo.text}
+                        </span>
+                      </td>
+                      <td style={{ fontWeight: '500', color: '#374151' }}>
+                        {fechaCreacion}
+                      </td>
+                      <td style={{ maxWidth: '300px' }}>
+                        <span style={{
+                          color: '#6B7280',
+                          fontSize: '0.85rem',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}>
+                          {categoria.descripcion || 'Sin descripción'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="table-actions">
+                          {can('EDIT_CATEGORIA') && (
+                            <Button
+                              variant="secondary"
+                              className="btn-sm"
+                              onClick={() => handleEdit(categoria)}
+                              title={isInactiva ? 'No se puede editar categorías inactivas' : 'Editar categoría'}
+                              disabled={isInactiva}
+                              style={{
+                                opacity: isInactiva ? 0.5 : 1,
+                                cursor: isInactiva ? 'not-allowed' : 'pointer'
+                              }}
+                            >
+                              <i className="bi bi-pencil"></i>
+                              <span>Editar</span>
+                            </Button>
+                          )}
+                          {can('EDIT_CATEGORIA') && (
+                            <>
+                              {/* Botón Activar - solo visible para categorías inactivas */}
+                              {isInactiva && (
+                                <Button
+                                  variant="primary"
+                                  className="btn-sm"
+                                  onClick={() => handleToggleEstado(categoria)}
+                                  title="Activar categoría"
+                                >
+                                  <i className="bi bi-play-circle"></i>
+                                  <span>Activar</span>
+                                </Button>
+                              )}
+
+                              {/* Botón Desactivar - solo visible para categorías activas */}
+                              {isActiva && (
+                                <Button
+                                  variant="secondary"
+                                  className="btn-sm"
+                                  onClick={() => handleToggleEstado(categoria)}
+                                  title="Desactivar categoría"
+                                >
+                                  <i className="bi bi-pause-circle"></i>
+                                  <span>Desactivar</span>
+                                </Button>
+                              )}
+                            </>
+                          )}
+                          {can('DELETE_CATEGORIA') && (
+                            <Button
+                              variant="danger"
+                              className="btn-sm"
+                              onClick={() => handleDelete(categoria)}
+                              title="Eliminar categoría"
+                            >
+                              <i className="bi bi-trash"></i>
+                              <span>Eliminar</span>
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <Empty message={searchTerm ? "No se encontraron categorías" : "No hay categorías registradas"} />
+          )}
+        </div>
+      </main>
+    </div>
   );
 }

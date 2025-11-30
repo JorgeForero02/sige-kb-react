@@ -1,7 +1,8 @@
 ﻿import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { logger } from '../services/logger';
-import { MainLayout } from '../components/layout/MainLayout';
+import { Header } from '../components/layout/Header';
+import { Sidebar } from '../components/layout/Sidebar';
 import { Card, Button, Input, Select, Loading, Empty } from '../components/common/Components';
 import { AlertSimple } from '../components/common/AlertSimple';
 import { useAlert } from '../hooks/useAlert';
@@ -216,7 +217,7 @@ function ModalCategoriaEgreso({ show, onClose, onSuccess }) {
     descripcion: ''
   });
   const [saving, setSaving] = useState(false);
-  const [localAlert, setLocalAlert] = useState(null); // Estado local para alertas
+  const [localAlert, setLocalAlert] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -241,7 +242,7 @@ function ModalCategoriaEgreso({ show, onClose, onSuccess }) {
       onSuccess();
       setTimeout(() => {
         onClose();
-      }, 1500); // Cerrar después de mostrar el éxito
+      }, 1500);
     } catch (err) {
       logger.error('Error al crear categoría', err.message);
       setLocalAlert({ message: err.message || 'Error al crear categoría', type: 'error' });
@@ -254,11 +255,10 @@ function ModalCategoriaEgreso({ show, onClose, onSuccess }) {
       nombre: '',
       descripcion: ''
     });
-    setLocalAlert(null); // Limpiar alerta local
+    setLocalAlert(null);
     onClose();
   };
 
-  // Limpiar alerta cuando el modal se abra
   useEffect(() => {
     if (show) {
       setLocalAlert(null);
@@ -291,7 +291,6 @@ function ModalCategoriaEgreso({ show, onClose, onSuccess }) {
         margin: '1rem',
         boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)'
       }}>
-        {/* Header fijo */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -324,7 +323,6 @@ function ModalCategoriaEgreso({ show, onClose, onSuccess }) {
           </button>
         </div>
 
-        {/* Contenido desplazable */}
         <div style={{
           padding: '2rem',
           overflowY: 'auto',
@@ -428,7 +426,6 @@ function ModalEgreso({ show, onClose, categorias, onSuccess }) {
         descripcion: formData.descripcion || ''
       });
 
-      // Mostrar alerta de éxito
       setAlertConfig({
         type: 'success',
         title: '¡Éxito!',
@@ -436,7 +433,6 @@ function ModalEgreso({ show, onClose, categorias, onSuccess }) {
       });
       setShowAlert(true);
 
-      // Limpiar formulario y cerrar después de un tiempo
       setTimeout(() => {
         setFormData({
           categoria: '',
@@ -512,7 +508,6 @@ function ModalEgreso({ show, onClose, categorias, onSuccess }) {
           margin: '1rem',
           boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)'
         }}>
-          {/* Header fijo */}
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -545,7 +540,6 @@ function ModalEgreso({ show, onClose, categorias, onSuccess }) {
             </button>
           </div>
 
-          {/* Contenido desplazable */}
           <div style={{
             padding: '2rem',
             overflowY: 'auto',
@@ -613,7 +607,6 @@ function ModalEgreso({ show, onClose, categorias, onSuccess }) {
         </div>
       </div>
 
-      {/* AlertSimple personalizado */}
       <AlertSimple
         show={showAlert}
         onClose={handleAlertClose}
@@ -626,6 +619,7 @@ function ModalEgreso({ show, onClose, categorias, onSuccess }) {
     </>
   );
 }
+
 function EgresosTab({
   egresos,
   loading,
@@ -633,7 +627,7 @@ function EgresosTab({
   onBusquedaChange,
   onRefresh,
   onNuevoEgreso,
-  onNuevaCategoria, // Nueva prop
+  onNuevaCategoria,
   fechaInicio,
   fechaFin,
   onFechaInicioChange,
@@ -641,7 +635,6 @@ function EgresosTab({
 }) {
   return (
     <div>
-      {/* Filtros y búsqueda */}
       <div style={{
         display: 'flex',
         gap: '1rem',
@@ -649,14 +642,13 @@ function EgresosTab({
         marginBottom: '1rem',
         flexWrap: 'wrap'
       }}>
-        <Button 
-          variant="categorias" 
+        <Button
+          variant="categorias"
           onClick={onNuevaCategoria}
         >
           Nueva Categoría
         </Button>
 
-        {/* Botón Nuevo Egreso */}
         <Button variant="primary" onClick={onNuevoEgreso}>
           <i className="bi bi-plus-circle"></i> Nuevo Egreso
         </Button>
@@ -673,7 +665,6 @@ function EgresosTab({
           flex: 1,
           flexWrap: 'wrap'
         }}>
-          {/* Contenedor para fechas (una al lado de la otra) */}
           <div style={{
             display: 'flex',
             gap: '1rem',
@@ -704,16 +695,8 @@ function EgresosTab({
             />
           </div>
         </div>
-
-        <div style={{
-          display: 'flex',
-          gap: '1rem',
-          alignItems: 'center'
-        }}>
-        </div>
       </div>
 
-      {/* Tabla de egresos */}
       {loading ? (
         <Loading />
       ) : egresos.length > 0 ? (
@@ -783,7 +766,6 @@ function EgresosTab({
   );
 }
 
-// Componente de Pestañas
 function Tabs({ activeTab, onTabChange }) {
   const tabs = [
     { id: 'ingresos', label: 'Ingresos', icon: 'bi-arrow-down-circle' },
@@ -806,7 +788,6 @@ function Tabs({ activeTab, onTabChange }) {
   );
 }
 
-// Componente de Ingresos
 function IngresosTab({
   ingresos,
   loading,
@@ -819,19 +800,25 @@ function IngresosTab({
   onFechaInicioChange,
   onFechaFinChange
 }) {
+
+  const [showDetallesModal, setShowDetallesModal] = useState(false);
+  const [ingresoSeleccionado, setIngresoSeleccionado] = useState(null);
+  const [loadingDetalles, setLoadingDetalles] = useState(false);
+
+  const handleVerDetalles = async (ingresoId) => {
+    setLoadingDetalles(true);
+    try {
+      const response = await api.getIngresosById(ingresoId);
+      setIngresoSeleccionado(response.data);
+      setShowDetallesModal(true);
+    } catch (err) {
+      console.error('Error al cargar detalles del ingreso:', err);
+    }
+    setLoadingDetalles(false);
+  };
+
   return (
     <div>
-      {/* Filtros y búsqueda */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '1rem',
-        flexWrap: 'wrap',
-        gap: '1rem'
-      }}>
-      </div>
-
       <div style={{
         display: 'flex',
         alignItems: 'flex-end',
@@ -843,7 +830,6 @@ function IngresosTab({
           flex: 1,
           flexWrap: 'wrap'
         }}>
-          {/* Contenedor para fechas (una al lado de la otra) */}
           <div style={{
             display: 'flex',
             gap: '1rem',
@@ -874,16 +860,8 @@ function IngresosTab({
             />
           </div>
         </div>
-
-        <div style={{
-          display: 'flex',
-          gap: '1rem',
-          alignItems: 'center'
-        }}>
-        </div>
       </div>
 
-      {/* Tabla de ingresos */}
       {loading ? (
         <Loading />
       ) : ingresos.length > 0 ? (
@@ -904,6 +882,7 @@ function IngresosTab({
                   <th>Empleado</th>
                   <th>Medio de Pago</th>
                   <th>Importe</th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -968,6 +947,21 @@ function IngresosTab({
                     }}>
                       +${(parseFloat(ingreso.valor) + parseFloat(ingreso.extra || 0)).toLocaleString('es-CO')}
                     </td>
+                    <td>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleVerDetalles(ingreso.id)}
+                        disabled={loadingDetalles}
+                        style={{
+                          padding: '0.35rem 0.7rem',
+                          fontSize: '0.75rem',
+                          minWidth: 'auto'
+                        }}
+                      >
+                        <i className="bi bi-eye"></i> Detalles
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -981,11 +975,237 @@ function IngresosTab({
             "No hay ingresos en el rango seleccionado"
         } />
       )}
+      <ModalDetallesIngreso
+        show={showDetallesModal}
+        onClose={() => {
+          setShowDetallesModal(false);
+          setIngresoSeleccionado(null);
+        }}
+        ingreso={ingresoSeleccionado}
+      />
+    </div>
+  );
+}
+
+function ModalDetallesIngreso({ show, onClose, ingreso }) {
+  const [citaInfo, setCitaInfo] = useState(null);
+  const [loadingCita, setLoadingCita] = useState(false);
+
+  useEffect(() => {
+    if (show && ingreso) {
+      fetchCitaInfo();
+    } else {
+      setCitaInfo(null);
+    }
+  }, [show, ingreso]);
+
+  const fetchCitaInfo = async () => {
+    const citaId = ingreso?.cita || ingreso?.cita_id;
+
+    if (!citaId) {
+      setCitaInfo(null);
+      return;
+    }
+
+    setLoadingCita(true);
+    try {
+      const response = await api.getCitaById(citaId);
+      setCitaInfo(response.data || response);
+    } catch (err) {
+      setCitaInfo(null);
+    }
+    setLoadingCita(false);
+  };
+
+  if (!show || !ingreso) return null;
+
+  const formatFecha = (fechaString) => {
+    if (!fechaString) return 'N/A';
+    try {
+      return new Date(fechaString + 'T00:00:00Z').toLocaleDateString('es-CO', { timeZone: 'UTC' });
+    } catch {
+      return fechaString;
+    }
+  };
+
+  const formatHora = (horaString) => {
+    if (!horaString) return 'N/A';
+    return horaString.slice(0, 5);
+  };
+
+  const getNombreCompleto = (persona) => {
+    if (!persona) return 'N/A';
+    const nombre = persona.nombre || '';
+    const apellido = persona.apellido || '';
+    return `${nombre} ${apellido}`.trim() || 'N/A';
+  };
+
+  const citaId = ingreso?.cita || ingreso?.cita_id;
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '12px',
+        width: '90%',
+        maxWidth: '700px',
+        maxHeight: '90vh',
+        display: 'flex',
+        flexDirection: 'column',
+        margin: '1rem',
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)'
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '1.5rem 2rem',
+          borderBottom: '2px solid var(--border)',
+          flexShrink: 0
+        }}>
+          <h4 style={{ margin: 0, fontWeight: '700', color: 'var(--dark)' }}>
+            Detalles del Ingreso
+          </h4>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '1.5rem',
+              cursor: 'pointer',
+              color: 'var(--gray)',
+              padding: 0,
+              width: '30px',
+              height: '30px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%'
+            }}
+          >
+            ×
+          </button>
+        </div>
+
+        <div style={{
+          padding: '2rem',
+          overflowY: 'auto',
+          flex: 1
+        }}>
+          <div className="form-layout">
+            <div style={{ gridColumn: '1 / -1', marginBottom: '2rem' }}>
+              <h5 style={{ color: '#10b981', marginBottom: '1rem', borderBottom: '2px solid #10b981', paddingBottom: '0.5rem' }}>
+                Información del Ingreso
+              </h5>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '1rem',
+                background: '#f8f9fa',
+                padding: '1.5rem',
+                borderRadius: '8px'
+              }}>
+                <div><strong>Fecha:</strong> <span style={{ color: '#1f2937' }}>{formatFecha(ingreso.fecha)}</span></div>
+                <div><strong>Medio de Pago:</strong> <span style={{ color: '#1f2937' }}>{ingreso.medio_pago}</span></div>
+                <div><strong>Valor Principal:</strong> <span style={{ color: '#1f2937' }}>${parseFloat(ingreso.valor).toLocaleString('es-CO')}</span></div>
+                <div><strong>Extra:</strong> <span style={{ color: '#1f2937' }}>${parseFloat(ingreso.extra || 0).toLocaleString('es-CO')}</span></div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <strong>Total:</strong>
+                  <span style={{
+                    fontWeight: '700',
+                    fontSize: '1.2rem',
+                    color: '#10b981',
+                    marginLeft: '0.5rem'
+                  }}>
+                    ${(parseFloat(ingreso.valor) + parseFloat(ingreso.extra || 0)).toLocaleString('es-CO')}
+                  </span>
+                </div>
+                {ingreso.nota && (
+                  <div style={{ gridColumn: '1 / -1', marginTop: '0.5rem' }}>
+                    <strong>Nota:</strong> <span style={{ color: '#1f2937' }}>{ingreso.nota}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={{ gridColumn: '1 / -1' }}>
+              <h5 style={{ color: '#3B82F6', marginBottom: '1rem', borderBottom: '2px solid #3B82F6', paddingBottom: '0.5rem' }}>
+                Información de la Cita
+                {loadingCita && <span style={{ marginLeft: '0.5rem', fontSize: '0.875rem', color: '#6B7280' }}>(cargando...)</span>}
+              </h5>
+
+              {loadingCita ? (
+                <div style={{
+                  background: '#f8f9fa',
+                  padding: '2rem',
+                  borderRadius: '8px',
+                  textAlign: 'center',
+                  color: '#6B7280'
+                }}>
+                  Cargando información de la cita...
+                </div>
+              ) : citaInfo ? (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '1rem',
+                  background: '#f0f9ff',
+                  padding: '1.5rem',
+                  borderRadius: '8px'
+                }}>
+                  <div><strong>Cliente:</strong> <span style={{ color: '#1f2937' }}>{getNombreCompleto(citaInfo.clienteInfo)}</span></div>
+                  <div><strong>Teléfono:</strong> <span style={{ color: '#1f2937' }}>{citaInfo.clienteInfo?.telefono || 'N/A'}</span></div>
+                  <div><strong>Documento:</strong> <span style={{ color: '#1f2937' }}>{citaInfo.clienteInfo?.documento || 'N/A'}</span></div>
+                  <div><strong>Tipo Doc:</strong> <span style={{ color: '#1f2937' }}>{citaInfo.clienteInfo?.tipo_documento || 'N/A'}</span></div>
+                  <div><strong>Servicio:</strong> <span style={{ color: '#1f2937' }}>{citaInfo.servicioInfo?.nombre || 'N/A'}</span></div>
+                  <div><strong>Precio Servicio:</strong> <span style={{ color: '#1f2937' }}>${parseFloat(citaInfo.servicioInfo?.precio || 0).toLocaleString('es-CO')}</span></div>
+                  <div><strong>Empleado:</strong> <span style={{ color: '#1f2937' }}>{getNombreCompleto(citaInfo.encargadoInfo)}</span></div>
+                  <div><strong>Duración:</strong> <span style={{ color: '#1f2937' }}>{citaInfo.duracion || 0} min</span></div>
+                  <div><strong>Fecha Cita:</strong> <span style={{ color: '#1f2937' }}>{formatFecha(citaInfo.fecha)}</span></div>
+                  <div><strong>Hora Inicio:</strong> <span style={{ color: '#1f2937' }}>{formatHora(citaInfo.hora_inicio)}</span></div>
+                  <div><strong>Hora Fin:</strong> <span style={{ color: '#1f2937' }}>{formatHora(citaInfo.hora_fin)}</span></div>
+                </div>
+              ) : (
+                <div style={{
+                  background: '#f8f9fa',
+                  padding: '1.5rem',
+                  borderRadius: '8px',
+                  textAlign: 'center',
+                  color: '#6B7280',
+                  fontStyle: 'italic'
+                }}>
+                  {citaId
+                    ? "No se pudo cargar la información de la cita asociada"
+                    : "No hay cita asociada a este ingreso"}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
+            <Button variant="secondary" onClick={onClose}>
+              Cerrar
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 export function FinanzasPage() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('ingresos');
   const [ingresos, setIngresos] = useState([]);
   const [egresos, setEgresos] = useState([]);
@@ -1073,101 +1293,109 @@ export function FinanzasPage() {
   const egresosFiltrados = filtrarRegistros(egresos, 'egresos');
 
   return (
-    <MainLayout title="Caja">
-      {alert && <AlertSimple message={alert.message} type={alert.type} />}
+    <div className="finanzas-page">
+      <Header />
+      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-      {/* Header con título */}
-      <div className="dashboard-header">
-        <p className="categorias-main-title">Gestión de ingresos y egresos</p>
-      </div>
+      <main className="main-content">
+        <button
+          className="hamburger content-hamburger"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          aria-label="Toggle menu"
+        >
+          <i className="bi bi-list"></i>
+        </button>
 
-      {/* Estadísticas */}
-      <div className="stats-grid">
-        <div className="stat-card stat-success">
-          <div className="stat-icon">
-            <i className="bi bi-arrow-down-circle"></i>
+        {alert && <AlertSimple message={alert.message} type={alert.type} />}
+
+        <div className="dashboard-header">
+          <p className="title">Gestión de ingresos y egresos</p>
+        </div>
+
+        <div className="stats-grid">
+          <div className="stat-card stat-success">
+            <div className="stat-icon">
+              <i className="bi bi-arrow-down-circle"></i>
+            </div>
+            <div className="stat-info">
+              <p className="stat-label">TOTAL INGRESOS</p>
+              <p className="stat-value">${totales.ingresos.toLocaleString('es-CO')}</p>
+            </div>
           </div>
-          <div className="stat-info">
-            <p className="stat-label">TOTAL INGRESOS</p>
-            <p className="stat-value">${totales.ingresos.toLocaleString('es-CO')}</p>
+
+          <div className="stat-card stat-danger">
+            <div className="stat-icon">
+              <i className="bi bi-arrow-up-circle"></i>
+            </div>
+            <div className="stat-info">
+              <p className="stat-label">TOTAL EGRESOS</p>
+              <p className="stat-value">${totales.egresos.toLocaleString('es-CO')}</p>
+            </div>
+          </div>
+
+          <div className={`stat-card ${totales.ganancia >= 0 ? 'stat-primary' : 'stat-warning'}`}>
+            <div className="stat-icon">
+              <i className="bi bi-graph-up-arrow"></i>
+            </div>
+            <div className="stat-info">
+              <p className="stat-label">GANANCIA NETA</p>
+              <p className="stat-value">${totales.ganancia.toLocaleString('es-CO')}</p>
+            </div>
           </div>
         </div>
 
-        <div className="stat-card stat-danger">
-          <div className="stat-icon">
-            <i className="bi bi-arrow-up-circle"></i>
-          </div>
-          <div className="stat-info">
-            <p className="stat-label">TOTAL EGRESOS</p>
-            <p className="stat-value">${totales.egresos.toLocaleString('es-CO')}</p>
-          </div>
-        </div>
+        <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-        <div className={`stat-card ${totales.ganancia >= 0 ? 'stat-primary' : 'stat-warning'}`}>
-          <div className="stat-icon">
-            <i className="bi bi-graph-up-arrow"></i>
-          </div>
-          <div className="stat-info">
-            <p className="stat-label">GANANCIA NETA</p>
-            <p className="stat-value">${totales.ganancia.toLocaleString('es-CO')}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Pestañas */}
-      <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
-
-      {/* Modales */}
-      <ModalIngreso
-        show={showModalIngreso}
-        onClose={() => setShowModalIngreso(false)}
-        empleados={empleados}
-        servicios={servicios}
-        onSuccess={fetchData}
-      />
-
-      <ModalEgreso
-        show={showModalEgreso}
-        onClose={() => setShowModalEgreso(false)}
-        categorias={categorias}
-        onSuccess={fetchData}
-      />
-
-      <ModalCategoriaEgreso
-        show={showModalCategoria}
-        onClose={() => setShowModalCategoria(false)}
-        onSuccess={fetchData}
-      />
-
-      {/* Contenido de pestañas */}
-      {activeTab === 'ingresos' ? (
-        <IngresosTab
-          ingresos={ingresosFiltrados}
-          loading={loading}
-          busqueda={busqueda}
-          onBusquedaChange={(e) => setBusqueda(e.target.value)}
-          onRefresh={fetchData}
-          onNuevoIngreso={() => setShowModalIngreso(true)}
-          fechaInicio={fechaInicio}
-          fechaFin={fechaFin}
-          onFechaInicioChange={(e) => setFechaInicio(e.target.value)}
-          onFechaFinChange={(e) => setFechaFin(e.target.value)}
+        <ModalIngreso
+          show={showModalIngreso}
+          onClose={() => setShowModalIngreso(false)}
+          empleados={empleados}
+          servicios={servicios}
+          onSuccess={fetchData}
         />
-      ) : (
-        <EgresosTab
-          egresos={egresosFiltrados}
-          loading={loading}
-          busqueda={busqueda}
-          onBusquedaChange={(e) => setBusqueda(e.target.value)}
-          onRefresh={fetchData}
-          onNuevoEgreso={() => setShowModalEgreso(true)}
-          onNuevaCategoria={() => setShowModalCategoria(true)}
-          fechaInicio={fechaInicio}
-          fechaFin={fechaFin}
-          onFechaInicioChange={(e) => setFechaInicio(e.target.value)}
-          onFechaFinChange={(e) => setFechaFin(e.target.value)}
+
+        <ModalEgreso
+          show={showModalEgreso}
+          onClose={() => setShowModalEgreso(false)}
+          categorias={categorias}
+          onSuccess={fetchData}
         />
-      )}
-    </MainLayout>
+
+        <ModalCategoriaEgreso
+          show={showModalCategoria}
+          onClose={() => setShowModalCategoria(false)}
+          onSuccess={fetchData}
+        />
+
+        {activeTab === 'ingresos' ? (
+          <IngresosTab
+            ingresos={ingresosFiltrados}
+            loading={loading}
+            busqueda={busqueda}
+            onBusquedaChange={(e) => setBusqueda(e.target.value)}
+            onRefresh={fetchData}
+            onNuevoIngreso={() => setShowModalIngreso(true)}
+            fechaInicio={fechaInicio}
+            fechaFin={fechaFin}
+            onFechaInicioChange={(e) => setFechaInicio(e.target.value)}
+            onFechaFinChange={(e) => setFechaFin(e.target.value)}
+          />
+        ) : (
+          <EgresosTab
+            egresos={egresosFiltrados}
+            loading={loading}
+            busqueda={busqueda}
+            onBusquedaChange={(e) => setBusqueda(e.target.value)}
+            onRefresh={fetchData}
+            onNuevoEgreso={() => setShowModalEgreso(true)}
+            onNuevaCategoria={() => setShowModalCategoria(true)}
+            fechaInicio={fechaInicio}
+            fechaFin={fechaFin}
+            onFechaInicioChange={(e) => setFechaInicio(e.target.value)}
+            onFechaFinChange={(e) => setFechaFin(e.target.value)}
+          />
+        )}
+      </main>
+    </div>
   );
 }

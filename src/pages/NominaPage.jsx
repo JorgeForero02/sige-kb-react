@@ -408,7 +408,7 @@ export function NominaPage() {
                                 className="btn btn-primary calculate-nomina-btn"
                                 onClick={() => setShowCalculateModal(true)}
                             >
-                                Calcular Pre-nómina
+                                Calcular 
                             </button>
                         )}
 
@@ -470,7 +470,7 @@ export function NominaPage() {
 
                                         <div className="col-md-2 d-flex align-items-end">
                                             <button
-                                                className="btn btn-outline-secondary w-100"
+                                                className="btn-secondary"
                                                 onClick={handleClearFilters}
                                                 style={{ borderRadius: '8px', border: '1px solid #ddd' }}
                                             >
@@ -668,7 +668,7 @@ export function NominaPage() {
                                                         Aplicar
                                                     </button>
                                                     <button
-                                                        className="btn btn-outline-secondary w-50"
+                                                        className="btn-secondary"
                                                         onClick={handleClearDescuentosFilters}
                                                         style={{ borderRadius: '8px', border: '1px solid #ddd' }}
                                                     >
@@ -806,7 +806,7 @@ export function NominaPage() {
                                             onClick={handleCalculateNomina}
                                             disabled={loading}
                                         >
-                                            {loading ? 'Calculando...' : 'Calcular Pre-nómina'}
+                                            {loading ? 'Calculando...' : 'Calcular'}
                                         </button>
                                     </div>
                                 </div>

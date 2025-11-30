@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MainLayout } from '../components/layout/MainLayout';
 import { Card, Button, Input, Loading, Empty, Select } from '../components/common/Components';
+import { Header } from '../components/layout/Header';
+import { Sidebar } from '../components/layout/Sidebar';
 import { AlertSimple } from '../components/common/AlertSimple';
 import { useAlert } from '../hooks/useAlert';
 import { useCategorias } from '../context/CategoriasContext';
@@ -671,15 +673,18 @@ function ModalIngreso({ show, onClose, cita, onSuccess, servicios }) {
 
     setSaving(true);
     try {
-      await api.crearIngreso({
+      const ingresoData = {
         fecha: new Date().toISOString().slice(0, 10),
-        servicio: cita.servicio,
-        empleado: cita.encargado,
+        servicio: parseInt(cita.servicio),
+        empleado: parseInt(cita.encargado),
+        cita: parseInt(cita.id),
         valor: parseFloat(formData.valor),
         extra: parseFloat(formData.extra || 0),
         medio_pago: formData.medio_pago,
-        nota: formData.nota || null
-      });
+        descripcion: formData.nota || ''
+      };
+
+      await api.crearIngreso(ingresoData);
 
       success('Ingreso registrado exitosamente!');
       setFormData({
@@ -803,6 +808,10 @@ function ModalIngreso({ show, onClose, cita, onSuccess, servicios }) {
             fontSize: '0.9rem'
           }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <strong style={{ color: '#6b7280', fontSize: '0.8rem' }}>ID Cita:</strong>
+              <span style={{ fontWeight: 'bold', color: '#f74780' }}>#{cita?.id}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
               <strong style={{ color: '#6b7280', fontSize: '0.8rem' }}>Cliente:</strong>
               <span>{cita?.clienteInfo?.nombre} {cita?.clienteInfo?.apellido}</span>
             </div>
@@ -896,6 +905,7 @@ export function CategoriaDetailPage() {
   const { user } = useAuth();
   const { can } = usePermissions();
   const [activeTab, setActiveTab] = useState('servicios');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [editingServicio, setEditingServicio] = useState(null);
   const [showEditServicioModal, setShowEditServicioModal] = useState(false);
@@ -1583,11 +1593,11 @@ export function CategoriaDetailPage() {
     const nuevoEstado = esActivo ? 'INACTIVO' : 'ACTIVO';
 
     setConfirmacionData({
-      title: `${accion.charAt(0).toUpperCase() + accion.slice(1)} servicio`,
+      title: esActivo ? 'Inactivar Servicio' : 'Activar Servicio',
       message: `¿Está seguro de que desea ${accion} el servicio "${servicio.nombre}"?`,
       confirmText: accion.charAt(0).toUpperCase() + accion.slice(1),
       cancelText: 'Cancelar',
-      type: nuevoEstado === 'INACTIVO' ? 'warning' : 'success',
+      type: esActivo ? 'error' : 'success',
       onConfirm: async () => {
         try {
           await api.actualizarServicio(servicio.id, { estado: nuevoEstado.toLowerCase() });
@@ -1596,6 +1606,7 @@ export function CategoriaDetailPage() {
         } catch (err) {
           showError(err.message || `Error al ${accion} servicio`);
         }
+        setShowConfirmacionPersonalizada(false);
       }
     });
     setShowConfirmacionPersonalizada(true);
@@ -1739,1051 +1750,1049 @@ export function CategoriaDetailPage() {
   };
 
   return (
-    <MainLayout title={`${categoria.nombre}`}>
-      {alert && <AlertSimple message={alert.message} type={alert.type} />}
+    <div className="app-layout">
+      <Header />
+      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-      <div style={{ marginBottom: '1.5rem' }}>
-        <div style={{
-          display: 'flex',
-          gap: '0',
-          background: '#f7cedbff',
-          padding: '0.25rem',
-          borderRadius: '23px',
-          width: '110%',
-          height: '50px',
-        }}>
-          <button
-            style={activeTab === 'servicios' ? {
-              padding: '0.5rem 1.5rem',
-              background: '#f74780',
-              borderRadius: '23px',
-              fontWeight: '600',
-              color: '#eef0f3ff',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              flex: 1,
-              border: 'none'
-            } : {
-              padding: '0.5rem 1.5rem',
-              background: 'transparent',
-              border: 'none',
-              fontWeight: '600',
-              color: '#0f0f0fff',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              flex: 1
-            }}
-            onClick={() => setActiveTab('servicios')}
-          >
-            Servicios
-          </button>
-          <button
-            style={activeTab === 'clientes' ? {
-              padding: '0.5rem 1.5rem',
-              background: '#f74780',
-              borderRadius: '23px',
-              fontWeight: '600',
-              color: '#eef0f3ff',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              flex: 1,
-              border: 'none'
-            } : {
-              padding: '0.5rem 1.5rem',
-              background: 'transparent',
-              border: 'none',
-              fontWeight: '600',
-              color: '#0f0f0fff',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              flex: 1
-            }}
-            onClick={() => setActiveTab('clientes')}
-          >
-            Clientes
-          </button>
-          <button
-            style={activeTab === 'agenda' ? {
-              padding: '0.5rem 1.5rem',
-              background: '#f74780',
-              borderRadius: '23px',
-              fontWeight: '600',
-              color: '#eef0f3ff',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              flex: 1,
-              border: 'none'
-            } : {
-              padding: '0.5rem 1.5rem',
-              background: 'transparent',
-              border: 'none',
-              fontWeight: '600',
-              color: '#0f0f0fff',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              flex: 1
-            }}
-            onClick={() => setActiveTab('agenda')}
-          >
-            Agenda
-          </button>
-        </div>
-      </div>
+      <main className="main-content">
+        <button
+          className="hamburger content-hamburger"
+          onClick={() => setSidebarOpen(true)}
+        >
+          <i className="bi bi-list"></i>
+        </button>
 
-      <div style={{ marginTop: '1rem' }}>
+        <div className="page-container">
+          {alert && <AlertSimple message={alert.message} type={alert.type} />}
 
-        {activeTab === 'servicios' && (
-          <div>
-            <div className="categorias-main-title">
-              <h4 style={{ margin: 0 }}>Lista de servicios</h4>
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                {can('CREATE_SERVICIO') && (
-                  <div className="categorias-main-title">
-                    <Button onClick={() => setShowServicioModal(true)}>
-                      + Nuevo Servicio
-                    </Button>
-                  </div>
-                )}
-              </div>
-              <Input
-                placeholder="Buscar por servicio..."
-                value={searchServicio}
-                onChange={(e) => setSearchServicio(e.target.value)}
-                style={{ width: '250px' }}
-              />
-            </div>
-
-            <Modal show={showEditServicioModal} onClose={handleCancelEdit}>
-              <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', color: '#333' }}>
-                Editar Servicio: {editingServicio?.nombre}
-              </h4>
-              <form onSubmit={handleUpdateServicio} className="form-layout">
-                <Input
-                  label="Nombre *"
-                  value={servicioForm.nombre}
-                  onChange={(e) => setServicioForm({ ...servicioForm, nombre: e.target.value })}
-                  placeholder="Nombre del servicio"
-                  required
-                  autoFocus
-                />
-                <Input
-                  label="Descripción"
-                  value={servicioForm.descripcion}
-                  onChange={(e) => setServicioForm({ ...servicioForm, descripcion: e.target.value })}
-                  placeholder="Descripción del servicio"
-                />
-                <Input
-                  label="Duración (minutos) *"
-                  type="number"
-                  value={servicioForm.duracion}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    // Validar que no sea negativo
-                    if (parseInt(value) < 0) {
-                      warning('La duración no puede ser negativa');
-                      return;
-                    }
-                    setServicioForm({ ...servicioForm, duracion: value });
-                  }}
-                  placeholder="30, 45, 60..."
-                  min="15"
-                  step="15"
-                  required
-                  onWheel={(e) => e.target.blur()}
-                />
-                <Input
-                  label="Precio *"
-                  type="number"
-                  value={servicioForm.precio}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    // Validar que no sea negativo
-                    if (parseFloat(value) < 0) {
-                      warning('El precio no puede ser negativo');
-                      return;
-                    }
-                    setServicioForm({ ...servicioForm, precio: value });
-                  }}
-                  placeholder="000"
-                  min="0"
-                  step="0.01"
-                  required
-                  onWheel={(e) => e.target.blur()}
-                />
-                <Input
-                  label="Porcentaje comisión"
-                  type="number"
-                  value={servicioForm.porcentaje}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    // Validar que no sea negativo
-                    if (parseFloat(value) < 0) {
-                      warning('El porcentaje no puede ser negativo');
-                      return;
-                    }
-                    setServicioForm({ ...servicioForm, porcentaje: value });
-                  }}
-                  placeholder="0"
-                  min="0"
-                  max="100"
-                  onWheel={(e) => e.target.blur()}
-                />
-                <div className="form-actions">
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    disabled={saving}
-                  >
-                    {saving ? 'Guardando...' : 'Actualizar Servicio'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={handleCancelEdit}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </form>
-            </Modal>
-
-            {can('CREATE_SERVICIO') && (
-              <Modal show={showServicioModal} onClose={() => setShowServicioModal(false)}>
-                <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', color: '#333' }}>
-                  Crear Servicio en {categoria.nombre}
-                </h4>
-                <form onSubmit={handleCreateServicio} className="form-layout">
-                  <Input
-                    label="Nombre *"
-                    value={servicioForm.nombre}
-                    onChange={(e) => setServicioForm({ ...servicioForm, nombre: e.target.value })}
-                    placeholder="Nombre del servicio"
-                    required
-                    autoFocus
-                  />
-                  <Input
-                    label="Descripción"
-                    value={servicioForm.descripcion}
-                    onChange={(e) => setServicioForm({ ...servicioForm, descripcion: e.target.value })}
-                    placeholder="Descripción del servicio"
-                  />
-                  <Input
-                    label="Duración (minutos) *"
-                    type="number"
-                    value={servicioForm.duracion}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      // Validar que no sea negativo
-                      if (parseInt(value) < 0) {
-                        warning('La duración no puede ser negativa');
-                        return;
-                      }
-                      setServicioForm({ ...servicioForm, duracion: value });
-                    }}
-                    placeholder="30, 45, 60..."
-                    min="15"
-                    step="15"
-                    required
-                    onWheel={(e) => e.target.blur()}
-                  />
-                  <Input
-                    label="Precio *"
-                    type="number"
-                    value={servicioForm.precio}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      // Validar que no sea negativo
-                      if (parseFloat(value) < 0) {
-                        warning('El precio no puede ser negativo');
-                        return;
-                      }
-                      setServicioForm({ ...servicioForm, precio: value });
-                    }}
-                    placeholder="000"
-                    min="0"
-                    step="0.01"
-                    required
-                    onWheel={(e) => e.target.blur()}
-                  />
-                  <Input
-                    label="Porcentaje comisión"
-                    type="number"
-                    value={servicioForm.porcentaje}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      // Validar que no sea negativo
-                      if (parseFloat(value) < 0) {
-                        warning('El porcentaje no puede ser negativo');
-                        return;
-                      }
-                      setServicioForm({ ...servicioForm, porcentaje: value });
-                    }}
-                    placeholder="0"
-                    min="0"
-                    max="100"
-                    onWheel={(e) => e.target.blur()}
-                  />
-                  <div className="form-actions">
-                    <Button
-                      type="submit"
-                      variant="primary"
-                      disabled={saving}
-                    >
-                      {saving ? 'Guardando...' : 'Crear Servicio'}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => setShowServicioModal(false)}
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                </form>
-              </Modal>
-            )}
-
-            <div className="table-container" style={{ marginTop: '1.5rem' }}>
-              {loading ? (
-                <Loading />
-              ) : serviciosFiltrados.length > 0 ? (
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Servicio</th>
-                      <th>Estado</th>
-                      <th>Descripción</th>
-                      <th>Duración</th>
-                      {can('EDIT_SERVICIO') && <th>Acciones</th>}
-                      {can('VIEW_TARIFAS') && <th>Tarifas</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {serviciosFiltrados.map(servicio => {
-                      const estado = getEstadoServicio(servicio);
-                      const estadoInfo = getColorEstado(estado);
-                      const esActivo = estado === 'ACTIVO';
-
-                      return (
-                        <tr key={servicio.id}>
-                          <td>
-                            <strong>{servicio.nombre}</strong>
-                          </td>
-                          <td>
-                            <span
-                              style={{
-                                padding: '0.35rem 0.9rem',
-                                borderRadius: '20px',
-                                fontSize: '0.75rem',
-                                fontWeight: '700',
-                                backgroundColor: estadoInfo.background,
-                                color: estadoInfo.color,
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px'
-                              }}
-                            >
-                              {estadoInfo.text}
-                            </span>
-                          </td>
-                          <td style={{ maxWidth: '200px' }}>
-                            <span style={{
-                              color: '#6B7280',
-                              fontSize: '0.85rem',
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden'
-                            }}>
-                              {servicio.descripcion || 'Sin descripción'}
-                            </span>
-                          </td>
-                          <td style={{ fontWeight: '500', color: '#374151' }}>
-                            {servicio.duracion} minutos
-                          </td>
-                          {can('EDIT_SERVICIO') && (
-                            <td>
-                              <div className="table-actions" style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => handleEditServicio(servicio)}
-                                  title={
-                                    !esActivo
-                                      ? 'No se puede editar servicios inactivos'
-                                      : 'Editar servicio'
-                                  }
-                                  disabled={
-                                    deletingServicio === servicio.id ||
-                                    !esActivo
-                                  }
-                                  style={{
-                                    padding: '0.2rem 0.5rem',
-                                    fontSize: '0.75rem',
-                                    minWidth: 'auto',
-                                    opacity: !esActivo ? 0.5 : 1,
-                                    cursor: !esActivo ? 'not-allowed' : 'pointer'
-                                  }}
-                                >
-                                  <i className="bi bi-pencil"></i>
-                                </Button>
-
-                                <Button
-                                  variant={esActivo ? "warning" : "success"}
-                                  size="sm"
-                                  onClick={() => handleToggleEstadoServicio(servicio)}
-                                  title={esActivo ? 'Inactivar servicio' : 'Activar servicio'}
-                                  disabled={deletingServicio === servicio.id}
-                                  style={{
-                                    padding: '0.2rem 0.5rem',
-                                    fontSize: '0.75rem',
-                                    minWidth: 'auto'
-                                  }}
-                                >
-                                  {esActivo ? (
-                                    <i className="bi bi-pause-circle" title="Inactivar"></i>
-                                  ) : (
-                                    <i className="bi bi-play-circle" title="Activar"></i>
-                                  )}
-                                </Button>
-
-                                <Button
-                                  variant="danger"
-                                  size="sm"
-                                  onClick={() => handleDeleteServicio(servicio)}
-                                  title="Eliminar servicio"
-                                  disabled={deletingServicio === servicio.id}
-                                  style={{
-                                    padding: '0.2rem 0.5rem',
-                                    fontSize: '0.75rem',
-                                    minWidth: 'auto'
-                                  }}
-                                >
-                                  {deletingServicio === servicio.id ? (
-                                    <i className="bi bi-arrow-repeat"></i>
-                                  ) : (
-                                    <i className="bi bi-trash"></i>
-                                  )}
-                                </Button>
-                              </div>
-                            </td>
-                          )}
-                          {can('VIEW_TARIFAS') && (
-                            <td>
-                              <Button
-                                variant="primary"
-                                size="sm"
-                                onClick={() => handleVerTarifas(servicio)}
-                                title="Ver tarifas"
-                                style={{
-                                  padding: '0.35rem 0.7rem',
-                                  fontSize: '0.75rem',
-                                  minWidth: 'auto',
-                                  height: '32px'
-                                }}
-                              >
-                                Tarifas
-                              </Button>
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              ) : (
-                <Empty message={`No hay servicios en ${categoria.nombre}`} />
-              )}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'clientes' && (
-          <div>
-            <div className="categorias-main-title">
-              <h4 style={{ margin: 0 }}>Lista de Clientes</h4>
-              <Button onClick={() => setShowClienteModal(true)}>
-                + Nuevo Cliente
-              </Button>
-            </div>
-
-            <Modal show={showEditClienteModal} onClose={handleCancelEditCliente}>
-              <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', color: '#333' }}>
-                Editar Cliente: {editingCliente?.nombre} {editingCliente?.apellido}
-              </h4>
-              <form onSubmit={handleUpdateCliente} className="form-layout">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <Input
-                    label="Nombre *"
-                    value={clienteForm.nombre}
-                    onChange={(e) => setClienteForm({ ...clienteForm, nombre: e.target.value })}
-                    placeholder="Nombre"
-                    required
-                    autoFocus
-                  />
-                  <Input
-                    label="Apellido *"
-                    value={clienteForm.apellido}
-                    onChange={(e) => setClienteForm({ ...clienteForm, apellido: e.target.value })}
-                    placeholder="Apellido"
-                    required
-                  />
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <Select
-                    label="Tipo Documento *"
-                    value={clienteForm.tipo_documento}
-                    onChange={(e) => setClienteForm({ ...clienteForm, tipo_documento: e.target.value })}
-                    options={[
-                      { id: 'CC', nombre: 'Cédula de Ciudadanía' },
-                      { id: 'TI', nombre: 'Tarjeta de Identidad' },
-                      { id: 'CE', nombre: 'Cédula de Extranjería' }
-                    ]}
-                    required
-                  />
-                  <Input
-                    label="Documento *"
-                    value={clienteForm.documento}
-                    onChange={(e) => setClienteForm({ ...clienteForm, documento: e.target.value })}
-                    placeholder="Número de documento"
-                    required
-                  />
-                </div>
-                <Input
-                  label="Teléfono"
-                  value={clienteForm.telefono}
-                  onChange={(e) => setClienteForm({ ...clienteForm, telefono: e.target.value })}
-                />
-                <div className="form-actions">
-                  <Button variant="primary" disabled={saving}>
-                    {saving ? 'Guardando...' : 'Actualizar Cliente'}
-                  </Button>
-                  <Button variant="secondary" onClick={handleCancelEditCliente}>
-                    Cancelar
-                  </Button>
-                </div>
-              </form>
-            </Modal>
-
-            <Modal show={showClienteModal} onClose={() => setShowClienteModal(false)}>
-              <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', color: '#333' }}>
-                Crear Cliente
-              </h4>
-              <form onSubmit={handleCreateCliente} className="form-layout">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <Input
-                    label="Nombre *"
-                    value={clienteForm.nombre}
-                    onChange={(e) => setClienteForm({ ...clienteForm, nombre: e.target.value })}
-                    placeholder="Nombre"
-                    required
-                    autoFocus
-                  />
-                  <Input
-                    label="Apellido *"
-                    value={clienteForm.apellido}
-                    onChange={(e) => setClienteForm({ ...clienteForm, apellido: e.target.value })}
-                    placeholder="Apellido"
-                    required
-                  />
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <Select
-                    label="Tipo Documento *"
-                    value={clienteForm.tipo_documento}
-                    onChange={(e) => setClienteForm({ ...clienteForm, tipo_documento: e.target.value })}
-                    options={[
-                      { id: 'CC', nombre: 'Cédula de Ciudadanía' },
-                      { id: 'TI', nombre: 'Tarjeta de Identidad' },
-                      { id: 'CE', nombre: 'Cédula de Extranjería' }
-                    ]}
-                    required
-                  />
-                  <Input
-                    label="Documento *"
-                    value={clienteForm.documento}
-                    onChange={(e) => setClienteForm({ ...clienteForm, documento: e.target.value })}
-                    placeholder="Número de documento"
-                    required
-                  />
-                </div>
-                <Input
-                  label="Teléfono"
-                  value={clienteForm.telefono}
-                  onChange={(e) => setClienteForm({ ...clienteForm, telefono: e.target.value })}
-                />
-                <div className="form-actions">
-                  <Button variant="primary" disabled={saving}>
-                    {saving ? 'Guardando...' : 'Crear Cliente'}
-                  </Button>
-                  <Button variant="secondary" onClick={() => setShowClienteModal(false)}>
-                    Cancelar
-                  </Button>
-                </div>
-              </form>
-            </Modal>
-
-            <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.8rem' }}>
-              <Input
-                placeholder="Buscar por nombre..."
-                value={searchCliente}
-                onChange={(e) => setSearchCliente(e.target.value)}
-                style={{ flex: 1 }}
-              />
-            </div>
-
-            <div className="table-container" style={{ marginTop: '1.5rem' }}>
-              {loading ? (
-                <Loading />
-              ) : clientesFiltrados.length > 0 ? (
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Cliente</th>
-                      <th>Documento</th>
-                      <th>Tipo</th>
-                      <th>Teléfono</th>
-                      <th>Estado</th>
-                      <th>Fecha Registro</th>
-                      <th>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {clientesFiltrados.map(cliente => {
-                      const estado = getEstadoCliente(cliente);
-                      const estadoInfo = getColorEstado(estado);
-                      const fechaRegistro = formatFecha(cliente.created_at || cliente.fecha_creacion || cliente.fechaRegistro);
-
-                      return (
-                        <tr key={cliente.id}>
-                          <td>
-                            <strong>{cliente.nombre} {cliente.apellido}</strong>
-                          </td>
-                          <td>{cliente.documento}</td>
-                          <td>
-                            <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#666' }}>
-                              {cliente.tipo_documento}
-                            </span>
-                          </td>
-                          <td>{cliente.telefono || '-'}</td>
-                          <td>
-                            <span
-                              style={{
-                                padding: '0.35rem 0.9rem',
-                                borderRadius: '20px',
-                                fontSize: '0.75rem',
-                                fontWeight: '700',
-                                backgroundColor: estadoInfo.background,
-                                color: estadoInfo.color,
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px'
-                              }}
-                            >
-                              {estadoInfo.text}
-                            </span>
-                          </td>
-                          <td style={{ fontWeight: '500', color: '#374151', fontSize: '0.85rem' }}>
-                            {fechaRegistro}
-                          </td>
-                          <td>
-                            <div className="table-actions" style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => handleEditCliente(cliente)}
-                                title={
-                                  estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE'
-                                    ? 'No se puede editar clientes inactivos'
-                                    : 'Editar cliente'
-                                }
-                                disabled={
-                                  deletingCliente === cliente.id ||
-                                  changingClienteState === cliente.id ||
-                                  estado === 'INACTIVO' ||
-                                  estado === 'INACTIVA' ||
-                                  estado === '0' ||
-                                  estado === 'FALSE'
-                                }
-                                style={{
-                                  padding: '0.2rem 0.5rem',
-                                  fontSize: '0.75rem',
-                                  minWidth: 'auto',
-                                  opacity: (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') ? 0.5 : 1,
-                                  cursor: (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') ? 'not-allowed' : 'pointer'
-                                }}
-                              >
-                                <i className="bi bi-pencil"></i>
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              ) : (
-                <Empty message="No hay clientes registrados" />
-              )}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'agenda' && (
-          <div>
-            <div className="categorias-main-title">
-              <h4 style={{ margin: 0 }}>Agenda</h4>
-              <div className="categorias-main-title">
-                <Button onClick={() => setShowCitaModal(true)}>
-                  + Nueva Cita
-                </Button>
-              </div>
-            </div>
-
-            {/* Filtros de Agenda MEJORADOS */}
+          <div style={{ marginBottom: '1.5rem' }}>
             <div style={{
               display: 'flex',
-              gap: '1rem',
-              alignItems: 'center',
-              marginBottom: '1.5rem',
-              flexWrap: 'wrap'
+              gap: '0',
+              background: '#f7cedbff',
+              padding: '0.25rem',
+              borderRadius: '23px',
+              width: '100%',
+              height: '50px',
             }}>
-              {/* Filtro por día */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#374151' }}>
-                  Filtro por día:
-                </label>
-                <Input
-                  type="date"
-                  value={fecha}
-                  onChange={(e) => {
-                    setFecha(e.target.value);
-                    setFiltroMes(''); // Limpiar filtro por mes cuando se selecciona un día
-                  }}
-                  style={{ width: '200px' }}
-                />
-              </div>
-
-              {/* Filtro por mes */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#374151' }}>
-                  O filtrar por mes:
-                </label>
-                <Input
-                  type="month"
-                  value={filtroMes}
-                  onChange={(e) => {
-                    setFiltroMes(e.target.value);
-                    setFecha(new Date().toISOString().slice(0, 10)); // Resetear fecha día
-                  }}
-                  style={{ width: '200px' }}
-                  placeholder="Seleccionar mes"
-                />
-              </div>
-
-              {/* Filtro por estado */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#374151' }}>
-                  Estado:
-                </label>
-                <Select
-                  value={filtroEstado}
-                  onChange={(e) => setFiltroEstado(e.target.value)}
-                  style={{ width: '200px' }}
-                  options={[
-                    { id: 'todas', nombre: 'Todas las citas' },
-                    { id: 'pendiente', nombre: 'Pendientes' },
-                    { id: 'confirmada', nombre: 'Confirmadas' },
-                    { id: 'completada', nombre: 'Completadas' },
-                    { id: 'cancelada', nombre: 'Canceladas' }
-                  ]}
-                />
-              </div>
-
-              {/* Botón para limpiar filtros */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'transparent' }}>
-                  Limpiar
-                </label>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setFiltroMes('');
-                    setFecha(new Date().toISOString().slice(0, 10));
-                    setFiltroEstado('todas');
-                  }}
-                  style={{ width: '120px' }}
-                >
-                  Limpiar Filtros
-                </Button>
-              </div>
-            </div>
-
-            <Modal show={showCitaModal} onClose={() => setShowCitaModal(false)}>
-              <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', color: '#333' }}>
-                Agendar Cita
-              </h4>
-              <form onSubmit={handleCreateCita} className="form-layout">
-                <Input
-                  label="Fecha de la cita *"
-                  type="date"
-                  value={filtroMes ? new Date().toISOString().slice(0, 10) : fecha}
-                  onChange={(e) => {
-                    if (!filtroMes) {
-                      setFecha(e.target.value);
-                    }
-                  }}
-                  required
-                />
-
-                <Input
-                  label="Hora *"
-                  type="time"
-                  value={citaForm.hora_inicio}
-                  onChange={(e) => setCitaForm({ ...citaForm, hora_inicio: e.target.value })}
-                  required
-                  autoFocus
-                />
-                <Select
-                  label="Servicio *"
-                  value={citaForm.servicio}
-                  onChange={(e) => {
-                    const servicioId = e.target.value;
-                    setCitaForm({ ...citaForm, servicio: servicioId });
-                    if (servicioId) {
-                      const servicioSeleccionado = servicios.find(s => s.id === parseInt(servicioId));
-                      if (servicioSeleccionado?.duracion) {
-                        setCitaForm(prev => ({
-                          ...prev,
-                          duracion: servicioSeleccionado.duracion.toString()
-                        }));
-                      }
-                    }
-                  }}
-                  options={servicios.filter(servicio => getEstadoServicio(servicio) === 'ACTIVO')}
-                  required
-                />
-                <Input
-                  label="Duración (minutos) *"
-                  type="number"
-                  value={citaForm.duracion}
-                  onChange={(e) => setCitaForm({ ...citaForm, duracion: e.target.value })}
-                  min="15"
-                  step="15"
-                  required
-                  disabled={!citaForm.servicio}
-                />
-                <Select
-                  label="Cliente *"
-                  value={citaForm.cliente}
-                  onChange={(e) => setCitaForm({ ...citaForm, cliente: e.target.value })}
-                  options={clientes}
-                  required
-                />
-                <Select
-                  label="Empleado *"
-                  value={citaForm.encargado}
-                  onChange={(e) => setCitaForm({ ...citaForm, encargado: e.target.value })}
-                  options={empleados}
-                  required
-                  disabled={isEmpleado}
-                />
-                <div className="form-actions">
-                  <Button variant="primary" disabled={saving}>
-                    {saving ? 'Creando...' : 'Crear Cita'}
-                  </Button>
-                  <Button variant="secondary" onClick={() => setShowCitaModal(false)}>
-                    Cancelar
-                  </Button>
-                </div>
-              </form>
-            </Modal>
-
-            <Modal show={showEditCitaModal} onClose={() => setShowEditCitaModal(false)}>
-              <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', color: '#333' }}>
-                Editar Cita
-              </h4>
-              <form onSubmit={handleUpdateCita} className="form-layout">
-                <Input
-                  label="Fecha *"
-                  type="date"
-                  value={editCitaForm.fecha}
-                  onChange={(e) => setEditCitaForm({ ...editCitaForm, fecha: e.target.value })}
-                  required
-                />
-                <Input
-                  label="Hora *"
-                  type="time"
-                  value={editCitaForm.hora_inicio}
-                  onChange={(e) => setEditCitaForm({ ...editCitaForm, hora_inicio: e.target.value })}
-                  required
-                />
-                <Select
-                  label="Servicio *"
-                  value={editCitaForm.servicio}
-                  onChange={(e) => setEditCitaForm({ ...editCitaForm, servicio: e.target.value })}
-                  options={servicios.filter(servicio => getEstadoServicio(servicio) === 'ACTIVO')}
-                  required
-                />
-                <Input
-                  label="Duración (minutos) *"
-                  type="number"
-                  value={editCitaForm.duracion}
-                  onChange={(e) => setEditCitaForm({ ...editCitaForm, duracion: e.target.value })}
-                  min="15"
-                  step="15"
-                  required
-                />
-                <Select
-                  label="Cliente *"
-                  value={editCitaForm.cliente}
-                  onChange={(e) => setEditCitaForm({ ...editCitaForm, cliente: e.target.value })}
-                  options={clientes}
-                  required
-                />
-                <Select
-                  label="Empleado *"
-                  value={editCitaForm.encargado}
-                  onChange={(e) => setEditCitaForm({ ...editCitaForm, encargado: e.target.value })}
-                  options={empleados}
-                  required
-                  disabled={isEmpleado}
-                />
-                <div className="form-actions">
-                  <Button variant="primary" disabled={saving}>
-                    {saving ? 'Actualizando...' : 'Actualizar Cita'}
-                  </Button>
-                  <Button variant="secondary" onClick={() => setShowEditCitaModal(false)}>
-                    Cancelar
-                  </Button>
-                </div>
-              </form>
-            </Modal>
-
-            <div className="citas-grid" style={{ marginTop: '1.5rem' }}>
-              {loading ? (
-                <Loading />
-              ) : citasFiltradas.length > 0 ? (
-                citasFiltradas.map(cita => (
-                  <Card key={cita.id} className="cita-card">
-                    <div className="cita-card-header">
-                      <div>
-                        <div className="cita-hora">
-                          <i className="bi bi-calendar"></i> {formatFecha(cita.fecha)}
-                        </div>
-                        <div className="cita-hora">
-                          <i className="bi bi-clock-history"></i> {cita.hora_inicio} - {cita.hora_fin}
-                        </div>
-                        <h5 className="cita-cliente">{cita.clienteInfo?.nombre} {cita.clienteInfo?.apellido}</h5>
-                        <p className="cita-empleado">
-                          <i className="bi bi-person-badge"></i> {cita.encargadoInfo?.nombre}
-                        </p>
-                      </div>
-                      <span className={`badge badge-${cita.estado || 'pendiente'}`}>
-                        {cita.estado || 'Pendiente'}
-                      </span>
-                    </div>
-                    <div className="cita-card-body">
-                      <p><i className="bi bi-briefcase"></i> {cita.servicioInfo?.nombre || 'Sin servicio'}</p>
-                      <p><i className="bi bi-telephone"></i> {cita.clienteInfo?.telefono || 'Sin teléfono'}</p>
-                      <p><i className="bi bi-hourglass-split"></i> {cita.duracion} minutos</p>
-                    </div>
-                    <div className="cita-card-actions">
-                      {/* Botón Editar - solo para citas pendientes o confirmadas */}
-                      {(cita.estado === 'pendiente' || cita.estado === 'confirmada') && (
-                        <Button
-                          onClick={() => handleEditCita(cita)}
-                          variant="secondary"
-                          size="sm"
-                          title="Editar cita"
-                        >
-                          <i className="bi bi-pencil"></i> Editar
-                        </Button>
-                      )}
-
-                      {/* Botones de estado */}
-                      {cita.estado === 'pendiente' && (
-                        <Button
-                          onClick={() => handleConfirmarCita(cita)}
-                          variant="primary"
-                          size="sm"
-                        >
-                          <i className="bi bi-check-circle"></i> Confirmar
-                        </Button>
-                      )}
-
-                      {cita.estado === 'confirmada' && (
-                        <Button
-                          onClick={() => handleCambiarEstadoCita(cita.id, 'completada')}
-                          variant="success"
-                          size="sm"
-                        >
-                          <i className="bi bi-check2-all"></i> Completar
-                        </Button>
-                      )}
-
-                      {/* Botón Cancelar - para citas pendientes o confirmadas */}
-                      {(cita.estado === 'pendiente' || cita.estado === 'confirmada') && (
-                        <Button
-                          onClick={() => handleCancelarCita(cita.id)}
-                          variant="danger"
-                          size="sm"
-                        >
-                          <i className="bi bi-x-circle"></i> Cancelar
-                        </Button>
-                      )}
-                    </div>
-                  </Card>
-                ))
-              ) : (
-                <Empty message={`No hay citas para los filtros seleccionados`} />
-              )}
+              <button
+                style={activeTab === 'servicios' ? {
+                  padding: '0.5rem 1.5rem',
+                  background: '#f74780',
+                  borderRadius: '23px',
+                  fontWeight: '600',
+                  color: '#eef0f3ff',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  flex: 1,
+                  border: 'none'
+                } : {
+                  padding: '0.5rem 1.5rem',
+                  background: 'transparent',
+                  border: 'none',
+                  fontWeight: '600',
+                  color: '#0f0f0fff',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  flex: 1
+                }}
+                onClick={() => setActiveTab('servicios')}
+              >
+                Servicios
+              </button>
+              <button
+                style={activeTab === 'clientes' ? {
+                  padding: '0.5rem 1.5rem',
+                  background: '#f74780',
+                  borderRadius: '23px',
+                  fontWeight: '600',
+                  color: '#eef0f3ff',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  flex: 1,
+                  border: 'none'
+                } : {
+                  padding: '0.5rem 1.5rem',
+                  background: 'transparent',
+                  border: 'none',
+                  fontWeight: '600',
+                  color: '#0f0f0fff',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  flex: 1
+                }}
+                onClick={() => setActiveTab('clientes')}
+              >
+                Clientes
+              </button>
+              <button
+                style={activeTab === 'agenda' ? {
+                  padding: '0.5rem 1.5rem',
+                  background: '#f74780',
+                  borderRadius: '23px',
+                  fontWeight: '600',
+                  color: '#eef0f3ff',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  flex: 1,
+                  border: 'none'
+                } : {
+                  padding: '0.5rem 1.5rem',
+                  background: 'transparent',
+                  border: 'none',
+                  fontWeight: '600',
+                  color: '#0f0f0fff',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  flex: 1
+                }}
+                onClick={() => setActiveTab('agenda')}
+              >
+                Agenda
+              </button>
             </div>
           </div>
-        )}
-      </div>
 
-      <ModalTarifas
-        show={showTarifasModal}
-        onClose={() => {
-          setShowTarifasModal(false);
-          setServicioTarifas(null);
-        }}
-        servicio={servicioTarifas}
-      />
+          <div style={{ marginTop: '1rem' }}>
 
-      <ModalConfirmacion
-        show={showConfirmModal}
-        onClose={() => setShowConfirmModal(false)}
-        onConfirm={handleConfirmarCitaDefinitiva}
-        cita={citaSeleccionada}
-      />
+            {activeTab === 'servicios' && (
+              <div>
+                <div className="title">
+                  <h4 style={{ margin: 0 }}>Lista de servicios</h4>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    {can('CREATE_SERVICIO') && (
+                      <div className="categorias-main-title">
+                        <Button onClick={() => setShowServicioModal(true)}>
+                          + Nuevo Servicio
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  <Input
+                    placeholder="Buscar por servicio..."
+                    value={searchServicio}
+                    onChange={(e) => setSearchServicio(e.target.value)}
+                    style={{ width: '250px' }}
+                  />
+                </div>
 
-      <ModalIngreso
-        show={showIngresoModal}
-        onClose={() => {
-          setShowIngresoModal(false);
-          setCitaSeleccionada(null);
-        }}
-        cita={citaSeleccionada}
-        onSuccess={() => {
-          setShowIngresoModal(false);
-          setCitaSeleccionada(null);
-          loadCitas();
-        }}
-        servicios={servicios}
-      />
+                <Modal show={showEditServicioModal} onClose={handleCancelEdit}>
+                  <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', color: '#333' }}>
+                    Editar Servicio: {editingServicio?.nombre}
+                  </h4>
+                  <form onSubmit={handleUpdateServicio} className="form-layout">
+                    <Input
+                      label="Nombre *"
+                      value={servicioForm.nombre}
+                      onChange={(e) => setServicioForm({ ...servicioForm, nombre: e.target.value })}
+                      placeholder="Nombre del servicio"
+                      required
+                      autoFocus
+                    />
+                    <Input
+                      label="Descripción"
+                      value={servicioForm.descripcion}
+                      onChange={(e) => setServicioForm({ ...servicioForm, descripcion: e.target.value })}
+                      placeholder="Descripción del servicio"
+                    />
+                    <Input
+                      label="Duración (minutos) *"
+                      type="number"
+                      value={servicioForm.duracion}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Validar que no sea negativo
+                        if (parseInt(value) < 0) {
+                          warning('La duración no puede ser negativa');
+                          return;
+                        }
+                        setServicioForm({ ...servicioForm, duracion: value });
+                      }}
+                      placeholder="30, 45, 60..."
+                      min="15"
+                      step="15"
+                      required
+                      onWheel={(e) => e.target.blur()}
+                    />
+                    <Input
+                      label="Precio *"
+                      type="number"
+                      value={servicioForm.precio}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Validar que no sea negativo
+                        if (parseFloat(value) < 0) {
+                          warning('El precio no puede ser negativo');
+                          return;
+                        }
+                        setServicioForm({ ...servicioForm, precio: value });
+                      }}
+                      placeholder="000"
+                      min="0"
+                      step="0.01"
+                      required
+                      onWheel={(e) => e.target.blur()}
+                    />
+                    <Input
+                      label="Porcentaje comisión"
+                      type="number"
+                      value={servicioForm.porcentaje}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Validar que no sea negativo
+                        if (parseFloat(value) < 0) {
+                          warning('El porcentaje no puede ser negativo');
+                          return;
+                        }
+                        setServicioForm({ ...servicioForm, porcentaje: value });
+                      }}
+                      placeholder="0"
+                      min="0"
+                      max="100"
+                      onWheel={(e) => e.target.blur()}
+                    />
+                    <div className="form-actions">
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        disabled={saving}
+                      >
+                        {saving ? 'Guardando...' : 'Actualizar Servicio'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={handleCancelEdit}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </form>
+                </Modal>
 
-      <AlertSimple
-        show={showConfirmacionPersonalizada}
-        onClose={() => setShowConfirmacionPersonalizada(false)}
-        onConfirm={confirmacionData.onConfirm}
-        onCancel={() => setShowConfirmacionPersonalizada(false)}
-        title={confirmacionData.title}
-        message={confirmacionData.message}
-        type={confirmacionData.type || 'info'}
-        confirmText={confirmacionData.confirmText}
-        cancelText={confirmacionData.cancelText}
-        showCancel={true}
-      />
-    </MainLayout>
+                {can('CREATE_SERVICIO') && (
+                  <Modal show={showServicioModal} onClose={() => setShowServicioModal(false)}>
+                    <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', color: '#333' }}>
+                      Crear Servicio en {categoria.nombre}
+                    </h4>
+                    <form onSubmit={handleCreateServicio} className="form-layout">
+                      <Input
+                        label="Nombre *"
+                        value={servicioForm.nombre}
+                        onChange={(e) => setServicioForm({ ...servicioForm, nombre: e.target.value })}
+                        placeholder="Nombre del servicio"
+                        required
+                        autoFocus
+                      />
+                      <Input
+                        label="Descripción"
+                        value={servicioForm.descripcion}
+                        onChange={(e) => setServicioForm({ ...servicioForm, descripcion: e.target.value })}
+                        placeholder="Descripción del servicio"
+                      />
+                      <Input
+                        label="Duración (minutos) *"
+                        type="number"
+                        value={servicioForm.duracion}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          // Validar que no sea negativo
+                          if (parseInt(value) < 0) {
+                            warning('La duración no puede ser negativa');
+                            return;
+                          }
+                          setServicioForm({ ...servicioForm, duracion: value });
+                        }}
+                        placeholder="30, 45, 60..."
+                        min="15"
+                        step="15"
+                        required
+                        onWheel={(e) => e.target.blur()}
+                      />
+                      <Input
+                        label="Precio *"
+                        type="number"
+                        value={servicioForm.precio}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          // Validar que no sea negativo
+                          if (parseFloat(value) < 0) {
+                            warning('El precio no puede ser negativo');
+                            return;
+                          }
+                          setServicioForm({ ...servicioForm, precio: value });
+                        }}
+                        placeholder="000"
+                        min="0"
+                        step="0.01"
+                        required
+                        onWheel={(e) => e.target.blur()}
+                      />
+                      <Input
+                        label="Porcentaje comisión"
+                        type="number"
+                        value={servicioForm.porcentaje}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          // Validar que no sea negativo
+                          if (parseFloat(value) < 0) {
+                            warning('El porcentaje no puede ser negativo');
+                            return;
+                          }
+                          setServicioForm({ ...servicioForm, porcentaje: value });
+                        }}
+                        placeholder="0"
+                        min="0"
+                        max="100"
+                        onWheel={(e) => e.target.blur()}
+                      />
+                      <div className="form-actions">
+                        <Button
+                          type="submit"
+                          variant="primary"
+                          disabled={saving}
+                        >
+                          {saving ? 'Guardando...' : 'Crear Servicio'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => setShowServicioModal(false)}
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </form>
+                  </Modal>
+                )}
+
+                <div className="table-container" style={{ marginTop: '1.5rem' }}>
+                  {loading ? (
+                    <Loading />
+                  ) : serviciosFiltrados.length > 0 ? (
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Servicio</th>
+                          <th>Estado</th>
+                          <th>Descripción</th>
+                          <th>Duración</th>
+                          {can('EDIT_SERVICIO') && <th>Acciones</th>}
+                          {can('VIEW_TARIFAS') && <th>Tarifas</th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {serviciosFiltrados.map(servicio => {
+                          const estado = getEstadoServicio(servicio);
+                          const estadoInfo = getColorEstado(estado);
+                          const esActivo = estado === 'ACTIVO';
+
+                          return (
+                            <tr key={servicio.id}>
+                              <td>
+                                <strong>{servicio.nombre}</strong>
+                              </td>
+                              <td>
+                                <span
+                                  style={{
+                                    padding: '0.35rem 0.9rem',
+                                    borderRadius: '20px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '700',
+                                    backgroundColor: estadoInfo.background,
+                                    color: estadoInfo.color,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px'
+                                  }}
+                                >
+                                  {estadoInfo.text}
+                                </span>
+                              </td>
+                              <td style={{ maxWidth: '200px' }}>
+                                <span style={{
+                                  color: '#6B7280',
+                                  fontSize: '0.85rem',
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden'
+                                }}>
+                                  {servicio.descripcion || 'Sin descripción'}
+                                </span>
+                              </td>
+                              <td style={{ fontWeight: '500', color: '#374151' }}>
+                                {servicio.duracion} minutos
+                              </td>
+                              {can('EDIT_SERVICIO') && (
+                                <td>
+                                  <div className="table-actions" style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      onClick={() => handleEditServicio(servicio)}
+                                      title={
+                                        !esActivo
+                                          ? 'No se puede editar servicios inactivos'
+                                          : 'Editar servicio'
+                                      }
+                                      disabled={
+                                        deletingServicio === servicio.id ||
+                                        !esActivo
+                                      }
+                                      style={{
+                                        padding: '0.2rem 0.5rem',
+                                        fontSize: '0.75rem',
+                                        minWidth: 'auto',
+                                        opacity: !esActivo ? 0.5 : 1,
+                                        cursor: !esActivo ? 'not-allowed' : 'pointer'
+                                      }}
+                                    >
+                                      <i className="bi bi-pencil"></i>
+                                    </Button>
+
+                                    {/* SOLUCIÓN: Solo mostrar botón de activar/inactivar, quitar el de eliminar */}
+                                    <Button
+                                      variant={esActivo ? "warning" : "success"}
+                                      size="sm"
+                                      onClick={() => handleToggleEstadoServicio(servicio)}
+                                      title={esActivo ? 'Inactivar servicio' : 'Activar servicio'}
+                                      disabled={deletingServicio === servicio.id}
+                                      style={{
+                                        padding: '0.2rem 0.5rem',
+                                        fontSize: '0.75rem',
+                                        minWidth: 'auto'
+                                      }}
+                                    >
+                                      {esActivo ? (
+                                        <i className="bi bi-pause-circle" title="Inactivar"></i>
+                                      ) : (
+                                        <i className="bi bi-play-circle" title="Activar"></i>
+                                      )}
+                                    </Button>
+                                  </div>
+                                </td>
+                              )}
+                              {can('VIEW_TARIFAS') && (
+                                <td>
+                                  <Button
+                                    variant="primary"
+                                    size="sm"
+                                    onClick={() => handleVerTarifas(servicio)}
+                                    title="Ver tarifas"
+                                    style={{
+                                      padding: '0.35rem 0.7rem',
+                                      fontSize: '0.75rem',
+                                      minWidth: 'auto',
+                                      height: '32px'
+                                    }}
+                                  >
+                                    Tarifas
+                                  </Button>
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <Empty message={`No hay servicios en ${categoria.nombre}`} />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'clientes' && (
+              <div>
+                <div className="title">
+                  <h4 style={{ margin: 0 }}>Lista de Clientes</h4>
+                  <Button onClick={() => setShowClienteModal(true)}>
+                    + Nuevo Cliente
+                  </Button>
+                </div>
+
+                <Modal show={showEditClienteModal} onClose={handleCancelEditCliente}>
+                  <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', color: '#333' }}>
+                    Editar Cliente: {editingCliente?.nombre} {editingCliente?.apellido}
+                  </h4>
+                  <form onSubmit={handleUpdateCliente} className="form-layout">
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                      <Input
+                        label="Nombre *"
+                        value={clienteForm.nombre}
+                        onChange={(e) => setClienteForm({ ...clienteForm, nombre: e.target.value })}
+                        placeholder="Nombre"
+                        required
+                        autoFocus
+                      />
+                      <Input
+                        label="Apellido *"
+                        value={clienteForm.apellido}
+                        onChange={(e) => setClienteForm({ ...clienteForm, apellido: e.target.value })}
+                        placeholder="Apellido"
+                        required
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                      <Select
+                        label="Tipo Documento *"
+                        value={clienteForm.tipo_documento}
+                        onChange={(e) => setClienteForm({ ...clienteForm, tipo_documento: e.target.value })}
+                        options={[
+                          { id: 'CC', nombre: 'Cédula de Ciudadanía' },
+                          { id: 'TI', nombre: 'Tarjeta de Identidad' },
+                          { id: 'CE', nombre: 'Cédula de Extranjería' }
+                        ]}
+                        required
+                      />
+                      <Input
+                        label="Documento *"
+                        value={clienteForm.documento}
+                        onChange={(e) => setClienteForm({ ...clienteForm, documento: e.target.value })}
+                        placeholder="Número de documento"
+                        required
+                      />
+                    </div>
+                    <Input
+                      label="Teléfono"
+                      value={clienteForm.telefono}
+                      onChange={(e) => setClienteForm({ ...clienteForm, telefono: e.target.value })}
+                    />
+                    <div className="form-actions">
+                      <Button variant="primary" disabled={saving}>
+                        {saving ? 'Guardando...' : 'Actualizar Cliente'}
+                      </Button>
+                      <Button variant="secondary" onClick={handleCancelEditCliente}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </form>
+                </Modal>
+
+                <Modal show={showClienteModal} onClose={() => setShowClienteModal(false)}>
+                  <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', color: '#333' }}>
+                    Crear Cliente
+                  </h4>
+                  <form onSubmit={handleCreateCliente} className="form-layout">
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                      <Input
+                        label="Nombre *"
+                        value={clienteForm.nombre}
+                        onChange={(e) => setClienteForm({ ...clienteForm, nombre: e.target.value })}
+                        placeholder="Nombre"
+                        required
+                        autoFocus
+                      />
+                      <Input
+                        label="Apellido *"
+                        value={clienteForm.apellido}
+                        onChange={(e) => setClienteForm({ ...clienteForm, apellido: e.target.value })}
+                        placeholder="Apellido"
+                        required
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                      <Select
+                        label="Tipo Documento *"
+                        value={clienteForm.tipo_documento}
+                        onChange={(e) => setClienteForm({ ...clienteForm, tipo_documento: e.target.value })}
+                        options={[
+                          { id: 'CC', nombre: 'Cédula de Ciudadanía' },
+                          { id: 'TI', nombre: 'Tarjeta de Identidad' },
+                          { id: 'CE', nombre: 'Cédula de Extranjería' }
+                        ]}
+                        required
+                      />
+                      <Input
+                        label="Documento *"
+                        value={clienteForm.documento}
+                        onChange={(e) => setClienteForm({ ...clienteForm, documento: e.target.value })}
+                        placeholder="Número de documento"
+                        required
+                      />
+                    </div>
+                    <Input
+                      label="Teléfono"
+                      value={clienteForm.telefono}
+                      onChange={(e) => setClienteForm({ ...clienteForm, telefono: e.target.value })}
+                    />
+                    <div className="form-actions">
+                      <Button variant="primary" disabled={saving}>
+                        {saving ? 'Guardando...' : 'Crear Cliente'}
+                      </Button>
+                      <Button variant="secondary" onClick={() => setShowClienteModal(false)}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </form>
+                </Modal>
+
+                <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.8rem' }}>
+                  <Input
+                    placeholder="Buscar por nombre..."
+                    value={searchCliente}
+                    onChange={(e) => setSearchCliente(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                </div>
+
+                <div className="table-container" style={{ marginTop: '1.5rem' }}>
+                  {loading ? (
+                    <Loading />
+                  ) : clientesFiltrados.length > 0 ? (
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Cliente</th>
+                          <th>Documento</th>
+                          <th>Tipo</th>
+                          <th>Teléfono</th>
+                          <th>Estado</th>
+                          <th>Fecha Registro</th>
+                          <th>Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {clientesFiltrados.map(cliente => {
+                          const estado = getEstadoCliente(cliente);
+                          const estadoInfo = getColorEstado(estado);
+                          const fechaRegistro = formatFecha(cliente.created_at || cliente.fecha_creacion || cliente.fechaRegistro);
+
+                          return (
+                            <tr key={cliente.id}>
+                              <td>
+                                <strong>{cliente.nombre} {cliente.apellido}</strong>
+                              </td>
+                              <td>{cliente.documento}</td>
+                              <td>
+                                <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#666' }}>
+                                  {cliente.tipo_documento}
+                                </span>
+                              </td>
+                              <td>{cliente.telefono || '-'}</td>
+                              <td>
+                                <span
+                                  style={{
+                                    padding: '0.35rem 0.9rem',
+                                    borderRadius: '20px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '700',
+                                    backgroundColor: estadoInfo.background,
+                                    color: estadoInfo.color,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px'
+                                  }}
+                                >
+                                  {estadoInfo.text}
+                                </span>
+                              </td>
+                              <td style={{ fontWeight: '500', color: '#374151', fontSize: '0.85rem' }}>
+                                {fechaRegistro}
+                              </td>
+                              <td>
+                                <div className="table-actions" style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => handleEditCliente(cliente)}
+                                    title={
+                                      estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE'
+                                        ? 'No se puede editar clientes inactivos'
+                                        : 'Editar cliente'
+                                    }
+                                    disabled={
+                                      deletingCliente === cliente.id ||
+                                      changingClienteState === cliente.id ||
+                                      estado === 'INACTIVO' ||
+                                      estado === 'INACTIVA' ||
+                                      estado === '0' ||
+                                      estado === 'FALSE'
+                                    }
+                                    style={{
+                                      padding: '0.2rem 0.5rem',
+                                      fontSize: '0.75rem',
+                                      minWidth: 'auto',
+                                      opacity: (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') ? 0.5 : 1,
+                                      cursor: (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') ? 'not-allowed' : 'pointer'
+                                    }}
+                                  >
+                                    <i className="bi bi-pencil"></i>
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <Empty message="No hay clientes registrados" />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'agenda' && (
+              <div>
+                <div className="title">
+                  <h4 style={{ margin: 0 }}>Agenda</h4>
+                  <div className="categorias-main-title">
+                    <Button onClick={() => setShowCitaModal(true)}>
+                      + Nueva Cita
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Filtros de Agenda MEJORADOS */}
+                <div style={{
+                  display: 'flex',
+                  gap: '1rem',
+                  alignItems: 'center',
+                  marginBottom: '1.5rem',
+                  flexWrap: 'wrap'
+                }}>
+                  {/* Filtro por día */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#374151' }}>
+                      Filtro por día:
+                    </label>
+                    <Input
+                      type="date"
+                      value={fecha}
+                      onChange={(e) => {
+                        setFecha(e.target.value);
+                        setFiltroMes(''); // Limpiar filtro por mes cuando se selecciona un día
+                      }}
+                      style={{ width: '200px' }}
+                    />
+                  </div>
+
+                  {/* Filtro por mes */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#374151' }}>
+                      O filtrar por mes:
+                    </label>
+                    <Input
+                      type="month"
+                      value={filtroMes}
+                      onChange={(e) => {
+                        setFiltroMes(e.target.value);
+                        setFecha(new Date().toISOString().slice(0, 10)); // Resetear fecha día
+                      }}
+                      style={{ width: '200px' }}
+                      placeholder="Seleccionar mes"
+                    />
+                  </div>
+
+                  {/* Filtro por estado */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#374151' }}>
+                      Estado:
+                    </label>
+                    <Select
+                      value={filtroEstado}
+                      onChange={(e) => setFiltroEstado(e.target.value)}
+                      style={{ width: '200px' }}
+                      options={[
+                        { id: 'todas', nombre: 'Todas las citas' },
+                        { id: 'pendiente', nombre: 'Pendientes' },
+                        { id: 'confirmada', nombre: 'Confirmadas' },
+                        { id: 'completada', nombre: 'Completadas' },
+                        { id: 'cancelada', nombre: 'Canceladas' }
+                      ]}
+                    />
+                  </div>
+
+                  {/* Botón para limpiar filtros */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'transparent' }}>
+                      Limpiar
+                    </label>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setFiltroMes('');
+                        setFecha(new Date().toISOString().slice(0, 10));
+                        setFiltroEstado('todas');
+                      }}
+                      style={{ width: '120px' }}
+                    >
+                      Limpiar Filtros
+                    </Button>
+                  </div>
+                </div>
+
+                <Modal show={showCitaModal} onClose={() => setShowCitaModal(false)}>
+                  <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', color: '#333' }}>
+                    Agendar Cita
+                  </h4>
+                  <form onSubmit={handleCreateCita} className="form-layout">
+                    <Input
+                      label="Fecha de la cita *"
+                      type="date"
+                      value={filtroMes ? new Date().toISOString().slice(0, 10) : fecha}
+                      onChange={(e) => {
+                        if (!filtroMes) {
+                          setFecha(e.target.value);
+                        }
+                      }}
+                      required
+                    />
+
+                    <Input
+                      label="Hora *"
+                      type="time"
+                      value={citaForm.hora_inicio}
+                      onChange={(e) => setCitaForm({ ...citaForm, hora_inicio: e.target.value })}
+                      required
+                      autoFocus
+                    />
+                    <Select
+                      label="Servicio *"
+                      value={citaForm.servicio}
+                      onChange={(e) => {
+                        const servicioId = e.target.value;
+                        setCitaForm({ ...citaForm, servicio: servicioId });
+                        if (servicioId) {
+                          const servicioSeleccionado = servicios.find(s => s.id === parseInt(servicioId));
+                          if (servicioSeleccionado?.duracion) {
+                            setCitaForm(prev => ({
+                              ...prev,
+                              duracion: servicioSeleccionado.duracion.toString()
+                            }));
+                          }
+                        }
+                      }}
+                      options={servicios.filter(servicio => getEstadoServicio(servicio) === 'ACTIVO')}
+                      required
+                    />
+                    <Input
+                      label="Duración (minutos) *"
+                      type="number"
+                      value={citaForm.duracion}
+                      onChange={(e) => setCitaForm({ ...citaForm, duracion: e.target.value })}
+                      min="15"
+                      step="15"
+                      required
+                      disabled={!citaForm.servicio}
+                    />
+                    <Select
+                      label="Cliente *"
+                      value={citaForm.cliente}
+                      onChange={(e) => setCitaForm({ ...citaForm, cliente: e.target.value })}
+                      options={clientes}
+                      required
+                    />
+                    <Select
+                      label="Empleado *"
+                      value={citaForm.encargado}
+                      onChange={(e) => setCitaForm({ ...citaForm, encargado: e.target.value })}
+                      options={empleados}
+                      required
+                      disabled={isEmpleado}
+                    />
+                    <div className="form-actions">
+                      <Button variant="primary" disabled={saving}>
+                        {saving ? 'Creando...' : 'Crear Cita'}
+                      </Button>
+                      <Button variant="secondary" onClick={() => setShowCitaModal(false)}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </form>
+                </Modal>
+
+                <Modal show={showEditCitaModal} onClose={() => setShowEditCitaModal(false)}>
+                  <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', color: '#333' }}>
+                    Editar Cita
+                  </h4>
+                  <form onSubmit={handleUpdateCita} className="form-layout">
+                    <Input
+                      label="Fecha *"
+                      type="date"
+                      value={editCitaForm.fecha}
+                      onChange={(e) => setEditCitaForm({ ...editCitaForm, fecha: e.target.value })}
+                      required
+                    />
+                    <Input
+                      label="Hora *"
+                      type="time"
+                      value={editCitaForm.hora_inicio}
+                      onChange={(e) => setEditCitaForm({ ...editCitaForm, hora_inicio: e.target.value })}
+                      required
+                    />
+                    <Select
+                      label="Servicio *"
+                      value={editCitaForm.servicio}
+                      onChange={(e) => setEditCitaForm({ ...editCitaForm, servicio: e.target.value })}
+                      options={servicios.filter(servicio => getEstadoServicio(servicio) === 'ACTIVO')}
+                      required
+                    />
+                    <Input
+                      label="Duración (minutos) *"
+                      type="number"
+                      value={editCitaForm.duracion}
+                      onChange={(e) => setEditCitaForm({ ...editCitaForm, duracion: e.target.value })}
+                      min="15"
+                      step="15"
+                      required
+                    />
+                    <Select
+                      label="Cliente *"
+                      value={editCitaForm.cliente}
+                      onChange={(e) => setEditCitaForm({ ...editCitaForm, cliente: e.target.value })}
+                      options={clientes}
+                      required
+                    />
+                    <Select
+                      label="Empleado *"
+                      value={editCitaForm.encargado}
+                      onChange={(e) => setEditCitaForm({ ...editCitaForm, encargado: e.target.value })}
+                      options={empleados}
+                      required
+                      disabled={isEmpleado}
+                    />
+                    <div className="form-actions">
+                      <Button variant="primary" disabled={saving}>
+                        {saving ? 'Actualizando...' : 'Actualizar Cita'}
+                      </Button>
+                      <Button variant="secondary" onClick={() => setShowEditCitaModal(false)}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </form>
+                </Modal>
+
+                <div className="citas-grid" style={{ marginTop: '1.5rem' }}>
+                  {loading ? (
+                    <Loading />
+                  ) : citasFiltradas.length > 0 ? (
+                    citasFiltradas.map(cita => (
+                      <Card key={cita.id} className="cita-card">
+                        <div className="cita-card-header">
+                          <div>
+                            <div className="cita-hora">
+                              <i className="bi bi-calendar"></i> {formatFecha(cita.fecha)}
+                            </div>
+                            <div className="cita-hora">
+                              <i className="bi bi-clock-history"></i> {cita.hora_inicio} - {cita.hora_fin}
+                            </div>
+                            <h5 className="cita-cliente">{cita.clienteInfo?.nombre} {cita.clienteInfo?.apellido}</h5>
+                            <p className="cita-empleado">
+                              <i className="bi bi-person-badge"></i> {cita.encargadoInfo?.nombre}
+                            </p>
+                          </div>
+                          <span className={`badge badge-${cita.estado || 'pendiente'}`}>
+                            {cita.estado || 'Pendiente'}
+                          </span>
+                        </div>
+                        <div className="cita-card-body">
+                          <p><i className="bi bi-briefcase"></i> {cita.servicioInfo?.nombre || 'Sin servicio'}</p>
+                          <p><i className="bi bi-telephone"></i> {cita.clienteInfo?.telefono || 'Sin teléfono'}</p>
+                          <p><i className="bi bi-hourglass-split"></i> {cita.duracion} minutos</p>
+                        </div>
+                        <div className="cita-card-actions">
+                          {/* Botón Editar - solo para citas pendientes o confirmadas */}
+                          {(cita.estado === 'pendiente' || cita.estado === 'confirmada') && (
+                            <Button
+                              onClick={() => handleEditCita(cita)}
+                              variant="secondary"
+                              size="sm"
+                              title="Editar cita"
+                            >
+                              <i className="bi bi-pencil"></i> Editar
+                            </Button>
+                          )}
+
+                          {/* Botones de estado */}
+                          {cita.estado === 'pendiente' && (
+                            <Button
+                              onClick={() => handleConfirmarCita(cita)}
+                              variant="primary"
+                              size="sm"
+                            >
+                              <i className="bi bi-check-circle"></i> Confirmar
+                            </Button>
+                          )}
+
+                          {cita.estado === 'confirmada' && (
+                            <Button
+                              onClick={() => handleCambiarEstadoCita(cita.id, 'completada')}
+                              variant="success"
+                              size="sm"
+                            >
+                              <i className="bi bi-check2-all"></i> Completar
+                            </Button>
+                          )}
+
+                          {/* Botón Cancelar - para citas pendientes o confirmadas */}
+                          {(cita.estado === 'pendiente' || cita.estado === 'confirmada') && (
+                            <Button
+                              onClick={() => handleCancelarCita(cita.id)}
+                              variant="danger"
+                              size="sm"
+                            >
+                              <i className="bi bi-x-circle"></i> Cancelar
+                            </Button>
+                          )}
+                        </div>
+                      </Card>
+                    ))
+                  ) : (
+                    <Empty message={`No hay citas para los filtros seleccionados`} />
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <ModalTarifas
+            show={showTarifasModal}
+            onClose={() => {
+              setShowTarifasModal(false);
+              setServicioTarifas(null);
+            }}
+            servicio={servicioTarifas}
+          />
+
+          <ModalConfirmacion
+            show={showConfirmModal}
+            onClose={() => setShowConfirmModal(false)}
+            onConfirm={handleConfirmarCitaDefinitiva}
+            cita={citaSeleccionada}
+          />
+
+          <ModalIngreso
+            show={showIngresoModal}
+            onClose={() => {
+              setShowIngresoModal(false);
+              setCitaSeleccionada(null);
+            }}
+            cita={citaSeleccionada}
+            onSuccess={() => {
+              setShowIngresoModal(false);
+              setCitaSeleccionada(null);
+              loadCitas();
+            }}
+            servicios={servicios}
+          />
+
+          {showConfirmacionPersonalizada && (
+            <AlertSimple
+              show={showConfirmacionPersonalizada}
+              onClose={() => setShowConfirmacionPersonalizada(false)}
+              onConfirm={confirmacionData.onConfirm}
+              title={confirmacionData.title} // Este título se mostrará en lugar del default
+              message={confirmacionData.message}
+              type={confirmacionData.type}
+              confirmText={confirmacionData.confirmText}
+              cancelText={confirmacionData.cancelText}
+              showCancel={true}
+            />
+          )}
+        </div>
+      </main>
+    </div>
+
   );
 }

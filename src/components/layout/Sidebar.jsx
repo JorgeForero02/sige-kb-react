@@ -12,14 +12,6 @@ export function Sidebar({ isOpen, setIsOpen }) {
 
   const { categorias, categoriasOpen, setCategoriasOpen } = useCategorias();
 
-  // DEBUG: Ver qué contiene el usuario
-  useEffect(() => {
-    console.log('🔍 DEBUG User object:', user);
-    console.log('🔍 DEBUG User rol:', user?.rol);
-    console.log('🔍 DEBUG User rolInfo:', user?.rolInfo);
-    console.log('🔍 DEBUG User rolInfo nombre:', user?.rolInfo?.nombre);
-  }, [user]);
-
   const categoriasActivas = categorias.filter(categoria => {
     const estado = categoria.estado?.toString().toUpperCase();
     return estado === '1';
@@ -40,8 +32,6 @@ export function Sidebar({ isOpen, setIsOpen }) {
   const rol = user?.rol || user?.rolInfo?.nombre || null;
   const rolString = rol ? (typeof rol === 'string' ? rol : String(rol)) : null;
 
-  console.log('🔍 DEBUG Final rolString:', rolString);
-
   const getSidebarTitle = () => {
     // Si no hay usuario, mostrar título genérico
     if (!rolString) {
@@ -54,9 +44,6 @@ export function Sidebar({ isOpen, setIsOpen }) {
         </div>
       );
     }
-
-    // DEBUG: Ver qué rol está llegando aquí
-    console.log('🔍 DEBUG En getSidebarTitle, rolString:', rolString);
 
     switch (rolString) {
       case 'Administrador':
@@ -107,8 +94,6 @@ export function Sidebar({ isOpen, setIsOpen }) {
       return [];
     }
 
-    console.log('🔍 DEBUG En getMenuByRole, rolString:', rolString);
-
     const base = { path: '/home', icon: 'bi-house-door-fill', label: 'Dashboard' };
 
     // Administrador solo ve Dashboard y Seguridad
@@ -144,7 +129,8 @@ export function Sidebar({ isOpen, setIsOpen }) {
         },
         { path: '/empleados', icon: 'bi-person-badge-fill', label: 'Empleados' },
         { path: '/caja', icon: 'bi-cash-coin', label: 'Caja' },
-        { path: '/nomina', icon: 'bi-journal-text', label: 'Nómina' }
+        { path: '/nomina', icon: 'bi-journal-text', label: 'Nómina' },
+        { path: '/reportes', icon: 'bi-graph-up', label: 'Reportes' } 
       ];
     }
 
@@ -160,6 +146,12 @@ export function Sidebar({ isOpen, setIsOpen }) {
           path: '/agenda-empleado',
           icon: 'bi-calendar-check',
           label: 'Agenda'
+        },
+        {
+          path: '/nomina-empleado',
+          icon: 'bi-journal-text',
+          label: 'Nomina'
+
         }
       ];
     }

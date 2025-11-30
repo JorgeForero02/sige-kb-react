@@ -1,6 +1,4 @@
-﻿// src/services/permissions.js
-
-export const ROLE_IDS = {
+﻿export const ROLE_IDS = {
   ADMIN: 1,
   GERENTE: 2,
   EMPLEADO: 3
@@ -43,10 +41,15 @@ export const PERMISSIONS = {
 
   CALC_NOMINA: ['Administrador', 'Gerente'],
   VIEW_DETALLES_NOMINA: ['Administrador', 'Gerente'],
-  VIEW_NOMINA: ['Administrador', 'Gerente'],
+  VIEW_NOMINA: ['Administrador', 'Gerente', 'Empleado'],
 
   CAL_DESCUENTOS_NOMINA: ['Administrador', 'Gerente'],
-  VIEW_DESCUENTOS_NOMINA: ['Administrador', 'Gerente'],
+  VIEW_DESCUENTOS_NOMINA: ['Administrador', 'Gerente', 'Empleado'],
+
+  VIEW_REPORTES: ['Administrador', 'Gerente'],
+  VIEW_REPORTE_MENSUAL: ['Administrador', 'Gerente'],
+  VIEW_REPORTE_PERSONALIZADO: ['Administrador', 'Gerente'],
+
 
   // EMPLEADO: Agenda y historial
   VIEW_MIS_CITAS: ['Administrador', 'Gerente', 'Empleado'],

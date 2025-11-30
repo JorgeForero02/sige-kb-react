@@ -269,6 +269,10 @@ class APIClient {
     });
   }
 
+  async getIngresosById(id){
+    return this.request(`/ingresos/${id}`, { method: 'GET' });
+  }
+
   // EGRESOS
   async getEgresos(params = '') {
     return this.request(`/egresos${params}`, { method: 'GET' });
@@ -331,6 +335,29 @@ class APIClient {
 
   async getDescuentoNominaById(id) {
     return this.request(`/descuentos-nomina/${id}`, { method: 'GET' });
+  }
+
+  //REPORTES
+  async getReporteMensual(mes, anio) {
+    const params = new URLSearchParams();
+    if (mes) params.append('mes', mes);
+    if (anio) params.append('anio', anio);
+
+    const queryString = params.toString();
+    return this.request(`/reportes/mensual${queryString ? `?${queryString}` : ''}`, {
+      method: 'GET'
+    });
+  }
+
+  async getReportePersonalizado(fechaInicio, fechaFin) {
+    const params = new URLSearchParams();
+    if (fechaInicio) params.append('fecha_inicio', fechaInicio);
+    if (fechaFin) params.append('fecha_fin', fechaFin);
+
+    const queryString = params.toString();
+    return this.request(`/reportes/personalizado${queryString ? `?${queryString}` : ''}`, {
+      method: 'GET'
+    });
   }
 
   // ROLES
