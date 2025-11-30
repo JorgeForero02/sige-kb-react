@@ -7,10 +7,9 @@ import './Sidebar.css';
 export function Sidebar({ isOpen, setIsOpen }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
-  const [securityOpen, setSecurityOpen] = useState(false);
+  const { user, rol, loading: authLoading, logout } = useAuth();
 
-  const { categorias, categoriasOpen, setCategoriasOpen } = useCategorias();
+  const { categorias, categoriasOpen, setCategoriasOpen, fetchCategorias, loading: categoriasLoading } = useCategorias();
 
   const categoriasActivas = categorias.filter(categoria => {
     const estado = categoria.estado?.toString().toUpperCase();
@@ -18,36 +17,64 @@ export function Sidebar({ isOpen, setIsOpen }) {
   });
 
   useEffect(() => {
-    if (location.pathname.includes('/categorias/') || location.pathname === '/categorias') {
+    const isCategoriasRoute = location.pathname.includes('/categorias');
+    if (isCategoriasRoute && !categoriasOpen) {
       setCategoriasOpen(true);
     }
-  }, [location.pathname, setCategoriasOpen]);
+  }, [location.pathname, categoriasOpen, setCategoriasOpen]);
+
+  useEffect(() => {
+    if (categoriasOpen && categorias.length === 0) {
+      fetchCategorias();
+    }
+  }, [categoriasOpen, categorias.length, fetchCategorias]);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  // DEBUG: Ver qué valores estamos obteniendo
-  const rol = user?.rol || user?.rolInfo?.nombre || null;
-  const rolString = rol ? (typeof rol === 'string' ? rol : String(rol)) : null;
+  const getRolInfo = () => {
+    if (authLoading) return 'loading';
+    if (!user) return 'no-user';
+
+    if (rol) return rol;
+    if (user.rol) return user.rol;
+    if (user.rolInfo?.nombre) return user.rolInfo.nombre;
+
+    return 'unknown';
+  };
+
+  const currentRol = getRolInfo();
 
   const getSidebarTitle = () => {
-    // Si no hay usuario, mostrar título genérico
-    if (!rolString) {
+    if (currentRol === 'loading') {
       return (
         <div className="sidebar-user-info">
           <i className="bi bi-person-circle user-icon"></i>
           <div className="sidebar-user">
-            <div className="sidebar-user">Cargando...</div>
+            <div className="sidebar-user-loading">Cargando...</div>
           </div>
         </div>
       );
     }
 
-    switch (rolString) {
-      case 'Administrador':
-      case 'Admin':
+    if (currentRol === 'no-user') {
+      return (
+        <div className="sidebar-user-info">
+          <i className="bi bi-person-circle user-icon"></i>
+          <div className="sidebar-user">
+            <div className="user-name">No autenticado</div>
+          </div>
+        </div>
+      );
+    }
+
+    const rolUpper = String(currentRol).toUpperCase();
+
+    switch (rolUpper) {
+      case 'ADMINISTRADOR':
+      case 'ADMIN':
         return (
           <div className="sidebar-user-info">
             <i className="bi bi-person-circle user-icon"></i>
@@ -57,7 +84,7 @@ export function Sidebar({ isOpen, setIsOpen }) {
           </div>
         );
 
-      case 'Gerente':
+      case 'GERENTE':
         return (
           <div className="sidebar-user-info">
             <i className="bi bi-person-circle user-icon"></i>
@@ -67,7 +94,7 @@ export function Sidebar({ isOpen, setIsOpen }) {
           </div>
         );
 
-      case 'Empleado':
+      case 'EMPLEADO':
         return (
           <div className="sidebar-user-info">
             <i className="bi bi-person-circle user-icon"></i>
@@ -76,38 +103,71 @@ export function Sidebar({ isOpen, setIsOpen }) {
             </div>
           </div>
         );
+
+      case 'UNKNOWN':
+      default:
+        return (
+          <div className="sidebar-user-info">
+            <i className="bi bi-person-circle user-icon"></i>
+            <div className="sidebar-user">
+              <div className="sidebar-user">Panel de Usuario</div>
+            </div>
+          </div>
+        );
     }
   };
 
-  const handleCategoriasClick = () => {
-    if (rolString === 'Gerente' && !categoriasOpen) {
+  const handleCategoriasClick = async () => {
+    const isMobile = window.innerWidth < 768;
+
+    if (categorias.length === 0) {
+      await fetchCategorias();
+    }
+
+    if (!location.pathname.includes('/categorias')) {
       navigate('/categorias');
-      setCategoriasOpen(true);
-    } else {
-      setCategoriasOpen(!categoriasOpen);
+    }
+
+    setCategoriasOpen(!categoriasOpen);
+
+    if (isMobile) {
+      setTimeout(() => setIsOpen(false), 300);
+    }
+  };
+
+  const handleSubItemClick = (subItemPath, subItemState) => {
+    navigate(subItemPath, { state: subItemState });
+
+    if (window.innerWidth < 768) {
+      setIsOpen(false);
     }
   };
 
   const getMenuByRole = () => {
-    // Si no hay usuario, no mostrar menú
-    if (!rolString) {
+    if (currentRol === 'loading') {
+      return [
+        { path: '/home', icon: 'bi-house-door-fill', label: 'Dashboard' }
+      ];
+    }
+
+    if (currentRol === 'no-user') {
       return [];
     }
 
     const base = { path: '/home', icon: 'bi-house-door-fill', label: 'Dashboard' };
+    const homeEmpleado = { path: '/home-empleado', icon: 'bi-house-door-fill', label: 'Dashboard' };
 
-    // Administrador solo ve Dashboard y Seguridad
-    if (rolString === 'Administrador' || rolString === 'Admin') {
+    const rolUpper = String(currentRol).toUpperCase();
+
+    if (rolUpper === 'ADMINISTRADOR' || rolUpper === 'ADMIN') {
       return [
-        base, {
-          path: '/roles', icon: 'bi-person-gear', label: 'Roles'
-        },
+        base,
+        { path: '/roles', icon: 'bi-person-gear', label: 'Roles' },
         { path: '/usuarios', icon: 'bi-person-badge-fill', label: 'Usuarios' }
       ];
     }
 
-    // Gerente - Categorías con gestión + subcategorías
-    if (rolString === 'Gerente') {
+    if (rolUpper === 'GERENTE') {
       return [
         base,
         {
@@ -117,46 +177,25 @@ export function Sidebar({ isOpen, setIsOpen }) {
           isOpen: categoriasOpen,
           onClick: handleCategoriasClick,
           mainPath: '/categorias',
-          subItems: categoriasActivas.map(categoria => ({
-            path: `/categorias/${encodeURIComponent(categoria.nombre)}`,
-            icon: 'bi-folder',
-            label: categoria.nombre,
-            state: {
-              categoriaId: categoria.id,
-              categoriaNombre: categoria.nombre
-            },
-          }))
+          subItems: categoriasActivas,
+          isLoading: categoriasLoading
         },
         { path: '/empleados', icon: 'bi-person-badge-fill', label: 'Empleados' },
         { path: '/caja', icon: 'bi-cash-coin', label: 'Caja' },
         { path: '/nomina', icon: 'bi-journal-text', label: 'Nómina' },
-        { path: '/reportes', icon: 'bi-graph-up', label: 'Reportes' } 
+        { path: '/reportes', icon: 'bi-graph-up', label: 'Reportes' }
       ];
     }
 
-    // Empleado - Solo servicios y agenda (sin dashboard)
-    if (rolString === 'Empleado') {
+    if (rolUpper === 'EMPLEADO') {
       return [
-        base, {
-          path: '/servicios-empleado',
-          icon: 'bi-scissors',
-          label: 'Servicios'
-        },
-        {
-          path: '/agenda-empleado',
-          icon: 'bi-calendar-check',
-          label: 'Agenda'
-        },
-        {
-          path: '/nomina-empleado',
-          icon: 'bi-journal-text',
-          label: 'Nomina'
-
-        }
+        homeEmpleado,
+        { path: '/servicios-empleado', icon: 'bi-scissors', label: 'Servicios' },
+        { path: '/agenda-empleado', icon: 'bi-calendar-check', label: 'Agenda' },
+        { path: '/nomina-empleado', icon: 'bi-journal-text', label: 'Nomina' }
       ];
     }
 
-    // Para cualquier otro rol no especificado, mostrar menú básico
     return [
       base,
       {
@@ -165,15 +204,8 @@ export function Sidebar({ isOpen, setIsOpen }) {
         icon: 'bi-tags-fill',
         isOpen: categoriasOpen,
         onClick: handleCategoriasClick,
-        subItems: categoriasActivas.map(categoria => ({
-          path: `/categorias/${encodeURIComponent(categoria.nombre)}`,
-          icon: 'bi-folder',
-          label: categoria.nombre,
-          state: {
-            categoriaId: categoria.id,
-            categoriaNombre: categoria.nombre
-          },
-        }))
+        subItems: categoriasActivas,
+        isLoading: categoriasLoading
       }
     ];
   };
@@ -181,13 +213,48 @@ export function Sidebar({ isOpen, setIsOpen }) {
   const menuItems = getMenuByRole();
 
   const isSubItemActive = (subItemPath) => {
-    const currentPath = location.pathname;
-    const subItemPathDecoded = decodeURIComponent(subItemPath);
-    return currentPath === subItemPathDecoded;
+    return location.pathname === subItemPath;
   };
 
   const isCategoriasActive = () => {
     return location.pathname === '/categorias' || location.pathname.includes('/categorias/');
+  };
+
+  const renderCategoriasSubItems = (subItems, isLoading) => {
+    if (isLoading) {
+      return (
+        <div className="sidebar-dropdown-loading">
+          <i className="bi bi-arrow-repeat spinner"></i>
+          <span>Cargando categorías...</span>
+        </div>
+      );
+    }
+
+    if (!subItems || subItems.length === 0) {
+      return (
+        <div className="sidebar-subitem empty">
+          <span>No hay categorías disponibles</span>
+        </div>
+      );
+    }
+
+    return subItems.map((categoria) => {
+      const subItemPath = `/categorias/${encodeURIComponent(categoria.nombre)}`;
+      const subItemState = {
+        categoriaId: categoria.id,
+        categoriaNombre: categoria.nombre
+      };
+
+      return (
+        <button
+          key={categoria.id}
+          className={`sidebar-subitem ${isSubItemActive(subItemPath) ? 'active' : ''}`}
+          onClick={() => handleSubItemClick(subItemPath, subItemState)}
+        >
+          <span>{categoria.nombre}</span>
+        </button>
+      );
+    });
   };
 
   return (
@@ -209,29 +276,21 @@ export function Sidebar({ isOpen, setIsOpen }) {
                 return (
                   <div key={item.label} className="sidebar-dropdown">
                     <button
-                      className={`sidebar-dropdown-toggle ${isCategoriasActive() ? 'active' : ''
-                        } ${item.isOpen ? 'active' : ''}`}
+                      className={`sidebar-dropdown-toggle ${isCategoriasActive() ? 'active' : ''} ${item.isOpen ? 'open' : ''}`}
                       onClick={item.onClick}
+                      disabled={item.isLoading}
                     >
                       <i className={`bi ${item.icon}`}></i>
                       <span>{item.label}</span>
-                      <i className={`bi ${item.isOpen ? 'bi-chevron-up' : 'bi-chevron-down'}`}></i>
+                      {item.isLoading ? (
+                        <i className="bi bi-arrow-repeat spinner"></i>
+                      ) : (
+                        <i className={`bi ${item.isOpen ? 'bi-chevron-up' : 'bi-chevron-down'}`}></i>
+                      )}
                     </button>
 
                     <div className={`sidebar-dropdown-content ${item.isOpen ? 'show' : ''}`}>
-                      {item.subItems.map((subItem, index) => {
-                        return (
-                          <Link
-                            key={subItem.path}
-                            to={subItem.path}
-                            state={subItem.state}
-                            className={`sidebar-subitem ${isSubItemActive(subItem.path) ? 'active' : ''}`}
-                            onClick={() => window.innerWidth < 768 && setIsOpen(false)}
-                          >
-                            <span>{subItem.label}</span>
-                          </Link>
-                        );
-                      })}
+                      {renderCategoriasSubItems(item.subItems, item.isLoading)}
                     </div>
                   </div>
                 );
@@ -250,7 +309,6 @@ export function Sidebar({ isOpen, setIsOpen }) {
               );
             })
           ) : (
-            // Mostrar mensaje de carga si no hay menú items
             <div className="sidebar-loading">
               <i className="bi bi-arrow-repeat spinner"></i>
               <span>Cargando menú...</span>

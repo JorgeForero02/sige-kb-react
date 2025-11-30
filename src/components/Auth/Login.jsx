@@ -96,12 +96,6 @@ export function Login() {
               {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </button>
           </form>
-
-          <div className="login-footer">
-            <small>
-              Demo: usuario: <strong>admin</strong> | contraseña: <strong>admin123</strong>
-            </small>
-          </div>
         </div>
       </div>
     </div>

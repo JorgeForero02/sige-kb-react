@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import api from '../services/api';
 import { logger } from '../services/logger';
 import { Header } from '../components/layout/Header';
@@ -6,6 +6,7 @@ import { Sidebar } from '../components/layout/Sidebar';
 import { Card, Input, Loading, Empty } from '../components/common/Components';
 import { AlertSimple } from '../components/common/AlertSimple';
 import { useAlert } from '../hooks/useAlert';
+import { AuthContext } from '../context/AuthContext';
 import '../pages/Pages.css';
 
 export function ServiciosEmpleadoPage() {
@@ -16,26 +17,105 @@ export function ServiciosEmpleadoPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const { alert, error: showError } = useAlert();
+  const { user } = useContext(AuthContext);
+
+  const empleadoId = user?.id;
 
   useEffect(() => {
-    fetchServicios();
-  }, []);
+    if (empleadoId) {
+      fetchServiciosDesdeCitas();
+    }
+  }, [empleadoId]);
 
-  const fetchServicios = async () => {
+  const fetchServiciosDesdeCitas = async () => {
+    if (!empleadoId) {
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await api.getServicios();
-      const serviciosData = res.data || [];
-      
-      setServicios(serviciosData);
-      setServiciosFiltrados(serviciosData);
-      
-      logger.success('Servicios cargados', `${serviciosData.length} servicios asignados`);
+      const res = await api.getAgendaEmpleado(empleadoId);
+      const citasData = res.data || [];
+
+      const serviciosUnicos = obtenerServiciosUnicosDesdeCitas(citasData);
+
+      const serviciosConCategoria = await obtenerInformacionCompletaServicios(serviciosUnicos);
+
+      setServicios(serviciosConCategoria);
+      setServiciosFiltrados(serviciosConCategoria);
+
+      if (serviciosConCategoria.length > 0) {
+        logger.success('Servicios cargados', `${serviciosConCategoria.length} servicios obtenidos de las citas`);
+      } else {
+        logger.info('Sin servicios', 'No tienes servicios en tus citas');
+      }
     } catch (err) {
-      logger.error('Error al cargar servicios', err.message);
-      showError(err.message || 'Error al cargar servicios');
+      logger.error('Error al cargar servicios desde citas', err.message);
+      showError(err.message || 'Error al cargar servicios desde citas');
     }
     setLoading(false);
+  };
+
+  const obtenerServiciosUnicosDesdeCitas = (citas) => {
+    if (!citas || citas.length === 0) {
+      return [];
+    }
+
+    const serviciosMap = new Map();
+
+    citas.forEach(cita => {
+      if (cita.servicioInfo && cita.servicioInfo.id) {
+        const servicioId = cita.servicioInfo.id;
+
+        if (!serviciosMap.has(servicioId)) {
+          serviciosMap.set(servicioId, {
+            id: servicioId,
+            nombre: cita.servicioInfo.nombre || 'Sin nombre',
+            descripcion: cita.servicioInfo.descripcion || '',
+            precio: Math.abs(parseFloat(cita.servicioInfo.precio)) || 0,
+            duracion: cita.servicioInfo.duracion || cita.duracion || 0,
+            porcentaje: cita.servicioInfo.porcentaje || null,
+            estado: 'ACTIVO'
+          });
+        }
+      }
+    });
+
+    return Array.from(serviciosMap.values());
+  };
+
+  const obtenerInformacionCompletaServicios = async (serviciosBasicos) => {
+    if (!serviciosBasicos || serviciosBasicos.length === 0) {
+      return [];
+    }
+
+    try {
+      const serviciosCompletos = await Promise.all(
+        serviciosBasicos.map(async (servicio) => {
+          try {
+            const res = await api.getServiciosById(servicio.id);
+            const servicioCompleto = res.data;
+
+            return {
+              ...servicio,
+              categoriaInfo: servicioCompleto.categoriaInfo || { nombre: '-' }
+            };
+          } catch (error) {
+            return {
+              ...servicio,
+              categoriaInfo: { nombre: '-' }
+            };
+          }
+        })
+      );
+
+      return serviciosCompletos;
+    } catch (error) {
+      return serviciosBasicos.map(servicio => ({
+        ...servicio,
+        categoriaInfo: { nombre: '-' }
+      }));
+    }
   };
 
   const getEstadoServicio = (servicio) => {
@@ -69,19 +149,6 @@ export function ServiciosEmpleadoPage() {
     }
   };
 
-  const formatFecha = (fechaString) => {
-    if (!fechaString) return '-';
-    
-    try {
-      const fecha = new Date(fechaString);
-      if (isNaN(fecha.getTime())) return '-';
-      return fecha.toLocaleDateString('es-ES');
-    } catch (error) {
-      return '-';
-    }
-  };
-
-  // Filtrar servicios basado en la búsqueda
   useEffect(() => {
     if (!searchTerm) {
       setServiciosFiltrados(servicios);
@@ -95,14 +162,17 @@ export function ServiciosEmpleadoPage() {
     }
   }, [searchTerm, servicios]);
 
+  if (!empleadoId && loading) {
+    return <Loading />;
+  }
+
   return (
-    <div className="app-layout">
+    <div className="dashboard-layout">
       <Header />
-      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
-      
-      <main className="content">
-        <div className="content-wrapper">
-          <button 
+      <div className="dashboard-container">
+        <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+        <div className="main-content">
+          <button
             className="hamburger content-hamburger"
             onClick={() => setSidebarOpen(true)}
           >
@@ -110,15 +180,14 @@ export function ServiciosEmpleadoPage() {
           </button>
 
           <div className="page-container">
-            {/* Header del dashboard */}
             <div className="dashboard-header">
               <div className="d-flex justify-content-between align-items-center mb-4">
                 <div>
                   <h1 className="dashboard-title">Mis Servicios</h1>
                   <p className="dashboard-subtitle">
-                    {servicios.length > 0 
-                      ? `Total: ${servicios.length} servicio${servicios.length !== 1 ? 's' : ''} asignado${servicios.length !== 1 ? 's' : ''}`
-                      : 'No tienes servicios asignados'
+                    {servicios.length > 0
+                      ? `Total: ${servicios.length} servicio${servicios.length !== 1 ? 's' : ''}`
+                      : 'No tienes servicios asociados'
                     }
                   </p>
                 </div>
@@ -127,10 +196,9 @@ export function ServiciosEmpleadoPage() {
 
             {alert && <AlertSimple message={alert.message} type={alert.type} />}
 
-            {/* Barra de búsqueda */}
             <div style={{ marginBottom: '1.5rem' }}>
               <Input
-                placeholder="Buscar servicios ..."
+                placeholder="Buscar servicios en mis citas ..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{ maxWidth: '400px' }}
@@ -138,14 +206,13 @@ export function ServiciosEmpleadoPage() {
               />
             </div>
 
-            {/* Tabla de servicios */}
             <div className="table-container">
               {loading ? (
                 <Loading />
               ) : serviciosFiltrados.length > 0 ? (
                 <Card>
                   <div className="card-header">
-                    <h3 className="title">Lista de Servicios</h3>
+                    <h3 className="title">Servicios</h3>
                   </div>
                   <div className="table-responsive">
                     <table className="table">
@@ -156,15 +223,13 @@ export function ServiciosEmpleadoPage() {
                           <th>Descripción</th>
                           <th>Duración</th>
                           <th>Precio</th>
-                          <th>Comisión</th>
-                          <th>Estado</th>
                         </tr>
                       </thead>
                       <tbody>
                         {serviciosFiltrados.map(servicio => {
                           const estado = getEstadoServicio(servicio);
                           const estadoInfo = getColorEstado(estado);
-                          
+
                           return (
                             <tr key={servicio.id}>
                               <td>
@@ -191,25 +256,6 @@ export function ServiciosEmpleadoPage() {
                               <td style={{ fontWeight: '600', color: '#059669' }}>
                                 ${servicio.precio?.toLocaleString('es-CO')}
                               </td>
-                              <td style={{ color: '#7C3AED' }}>
-                                {servicio.porcentaje ? `${servicio.porcentaje}%` : '-'}
-                              </td>
-                              <td>
-                                <span
-                                  style={{
-                                    padding: '0.35rem 0.9rem',
-                                    borderRadius: '20px',
-                                    fontSize: '0.75rem',
-                                    fontWeight: '700',
-                                    backgroundColor: estadoInfo.background,
-                                    color: estadoInfo.color,
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.5px'
-                                  }}
-                                >
-                                  {estadoInfo.text}
-                                </span>
-                              </td>
                             </tr>
                           );
                         })}
@@ -220,14 +266,16 @@ export function ServiciosEmpleadoPage() {
               ) : (
                 <Empty message={
                   searchTerm
-                    ? "No se encontraron servicios que coincidan con la búsqueda"
-                    : "No tienes servicios asignados"
+                    ? "No se encontraron servicios en tus citas que coincidan con la búsqueda"
+                    : empleadoId
+                      ? "No tienes servicios en tus citas. Los servicios aparecerán aquí cuando tengas citas asignadas."
+                      : "No se pudo cargar la información del empleado"
                 } />
               )}
             </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

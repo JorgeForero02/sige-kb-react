@@ -141,6 +141,10 @@ class APIClient {
     return this.request(`/servicios${params}`, { method: 'GET' });
   }
 
+  async getServiciosById(id) {
+    return this.request(`/servicios/${id}`, { method: 'GET' });
+  }
+
   async crearServicio(datos) {
     logger.info('Creando servicio', datos.nombre);
     return this.request('/servicios', {
@@ -269,7 +273,7 @@ class APIClient {
     });
   }
 
-  async getIngresosById(id){
+  async getIngresosById(id) {
     return this.request(`/ingresos/${id}`, { method: 'GET' });
   }
 

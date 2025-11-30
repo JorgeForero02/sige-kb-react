@@ -808,10 +808,6 @@ function ModalIngreso({ show, onClose, cita, onSuccess, servicios }) {
             fontSize: '0.9rem'
           }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-              <strong style={{ color: '#6b7280', fontSize: '0.8rem' }}>ID Cita:</strong>
-              <span style={{ fontWeight: 'bold', color: '#f74780' }}>#{cita?.id}</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
               <strong style={{ color: '#6b7280', fontSize: '0.8rem' }}>Cliente:</strong>
               <span>{cita?.clienteInfo?.nombre} {cita?.clienteInfo?.apellido}</span>
             </div>
@@ -1483,11 +1479,16 @@ export function CategoriaDetailPage() {
 
   const handleEditServicio = (servicio) => {
     const estado = getEstadoServicio(servicio);
+    const esActivo = estado === 'ACTIVO' || estado === '1' || estado === 1;
 
-    if (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') {
-      showError('No se puede editar un servicio inactivo.');
+    console.log('Servicio:', servicio.nombre, 'Estado:', estado, 'Es activo:', esActivo);
+
+    if (!esActivo) {
+      console.log('Mostrando alerta de servicio inactivo');
+      showError('No se puede editar un servicio inactivo. Primero debe activarlo.');
       return;
     }
+
     setEditingServicio(servicio);
     setServicioForm({
       nombre: servicio.nombre || '',
@@ -1497,6 +1498,7 @@ export function CategoriaDetailPage() {
       porcentaje: servicio.porcentaje?.toString() || ''
     });
     setShowEditServicioModal(true);
+    return true;
   };
 
   const handleUpdateServicio = async (e) => {
@@ -1562,7 +1564,7 @@ export function CategoriaDetailPage() {
       message: `¿Está seguro de que desea eliminar el servicio ${servicio.nombre}?`,
       confirmText: 'Eliminar',
       cancelText: 'Cancelar',
-      type: 'error', // Cambiado de isDanger a type
+      type: 'error', 
       onConfirm: async () => {
         try {
           setDeletingServicio(servicio.id);
@@ -1586,21 +1588,23 @@ export function CategoriaDetailPage() {
   };
 
   const handleToggleEstadoServicio = async (servicio) => {
-    const estadoActual = String(servicio.estado || 'activo').toUpperCase();
-    const esActivo = estadoActual === 'ACTIVO' || estadoActual === 'ACTIVA' || estadoActual === '1' || estadoActual === 'TRUE';
+    const estadoActual = servicio.estado;
+    const esActivo = estadoActual === 1 || estadoActual === '1';
 
     const accion = esActivo ? 'inactivar' : 'activar';
-    const nuevoEstado = esActivo ? 'INACTIVO' : 'ACTIVO';
+    const nuevoEstado = esActivo ? 0 : 1;
 
     setConfirmacionData({
       title: esActivo ? 'Inactivar Servicio' : 'Activar Servicio',
       message: `¿Está seguro de que desea ${accion} el servicio "${servicio.nombre}"?`,
       confirmText: accion.charAt(0).toUpperCase() + accion.slice(1),
       cancelText: 'Cancelar',
-      type: esActivo ? 'error' : 'success',
+      type: esActivo ? 'warning' : 'success',
       onConfirm: async () => {
         try {
-          await api.actualizarServicio(servicio.id, { estado: nuevoEstado.toLowerCase() });
+          await api.actualizarServicio(servicio.id, {
+            estado: nuevoEstado
+          });
           success(`Servicio ${accion}do exitosamente!`);
           loadServicios();
         } catch (err) {
@@ -1619,25 +1623,21 @@ export function CategoriaDetailPage() {
     }
 
     try {
-      // Si ya tiene formato DD/MM/YYYY, devolverlo tal cual
       if (fechaString.includes('/')) {
         return fechaString;
       }
 
-      // Para formato YYYY-MM-DD, extraer las partes directamente
       const fechaParts = fechaString.split('T')[0].split('-');
       if (fechaParts.length === 3) {
         const [year, month, day] = fechaParts;
         return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
       }
 
-      // Si viene en otro formato, usar Date pero forzar hora local
       const fecha = new Date(fechaString);
       if (isNaN(fecha.getTime())) {
         return 'Fecha inválida';
       }
 
-      // Ajustar para compensar zona horaria
       const fechaAjustada = new Date(fecha.getTime() + fecha.getTimezoneOffset() * 60000);
       const dia = fechaAjustada.getDate().toString().padStart(2, '0');
       const mes = (fechaAjustada.getMonth() + 1).toString().padStart(2, '0');
@@ -1652,14 +1652,14 @@ export function CategoriaDetailPage() {
 
   const getEstadoServicio = (servicio) => {
     if (servicio.estado !== undefined && servicio.estado !== null) {
-      const estado = String(servicio.estado).toUpperCase();
-      // Normalizar diferentes representaciones de estado activo/inactivo
-      if (estado === 'ACTIVO' || estado === 'ACTIVA' || estado === '1' || estado === 'TRUE' || estado === 'TRUE') {
+      const estado = servicio.estado;
+
+      if (estado === 1 || estado === '1' || estado === 'ACTIVO' || estado === 'ACTIVA' || estado === 'TRUE') {
         return 'ACTIVO';
-      } else if (estado === 'INACTIVO' || estado === 'INACTIVA' || estado === '0' || estado === 'FALSE') {
+      } else if (estado === 0 || estado === '0' || estado === 'INACTIVO' || estado === 'INACTIVA' || estado === 'FALSE') {
         return 'INACTIVO';
       }
-      return estado;
+      return String(estado).toUpperCase();
     }
     return 'ACTIVO';
   };
@@ -1672,15 +1672,15 @@ export function CategoriaDetailPage() {
   };
 
   const getColorEstado = (estado) => {
-    const estadoUpper = String(estado).toUpperCase();
+    const estadoStr = String(estado).toUpperCase();
 
-    if (estadoUpper === 'ACTIVO' || estadoUpper === 'ACTIVA' || estadoUpper === '1' || estadoUpper === 'TRUE') {
+    if (estadoStr === 'ACTIVO' || estadoStr === 'ACTIVA' || estadoStr === '1' || estadoStr === 'TRUE') {
       return {
         background: '#DCFCE7',
         color: '#166534',
         text: 'Activo'
       };
-    } else if (estadoUpper === 'INACTIVO' || estadoUpper === 'INACTIVA' || estadoUpper === '0' || estadoUpper === 'FALSE') {
+    } else if (estadoStr === 'INACTIVO' || estadoStr === 'INACTIVA' || estadoStr === '0' || estadoStr === 'FALSE') {
       return {
         background: '#FEE2E2',
         color: '#7F1D1D',
@@ -1764,6 +1764,23 @@ export function CategoriaDetailPage() {
 
         <div className="page-container">
           {alert && <AlertSimple message={alert.message} type={alert.type} />}
+
+          <div style={{
+            marginBottom: '1.5rem',
+            padding: '1rem 0',
+            borderBottom: '2px solid #f0f0f0'
+          }}>
+            <h1 style={{
+              margin: 0,
+              color: '#f74780',
+              fontSize: '2rem',
+              fontWeight: '700',
+              textAlign: 'center',
+              textTransform: 'capitalize'
+            }}>
+              {categoria.nombre}
+            </h1>
+          </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
             <div style={{
@@ -2085,7 +2102,7 @@ export function CategoriaDetailPage() {
                         {serviciosFiltrados.map(servicio => {
                           const estado = getEstadoServicio(servicio);
                           const estadoInfo = getColorEstado(estado);
-                          const esActivo = estado === 'ACTIVO';
+                          const esActivo = servicio.estado === 1 || servicio.estado === '1';
 
                           return (
                             <tr key={servicio.id}>
@@ -2135,22 +2152,15 @@ export function CategoriaDetailPage() {
                                           ? 'No se puede editar servicios inactivos'
                                           : 'Editar servicio'
                                       }
-                                      disabled={
-                                        deletingServicio === servicio.id ||
-                                        !esActivo
-                                      }
+                                      disabled={deletingServicio === servicio.id}
                                       style={{
                                         padding: '0.2rem 0.5rem',
                                         fontSize: '0.75rem',
                                         minWidth: 'auto',
-                                        opacity: !esActivo ? 0.5 : 1,
-                                        cursor: !esActivo ? 'not-allowed' : 'pointer'
                                       }}
                                     >
                                       <i className="bi bi-pencil"></i>
                                     </Button>
-
-                                    {/* SOLUCIÓN: Solo mostrar botón de activar/inactivar, quitar el de eliminar */}
                                     <Button
                                       variant={esActivo ? "warning" : "success"}
                                       size="sm"
@@ -2164,7 +2174,7 @@ export function CategoriaDetailPage() {
                                       }}
                                     >
                                       {esActivo ? (
-                                        <i className="bi bi-pause-circle" title="Inactivar"></i>
+                                        <i className="bi bi-trash" title="Inactivar"></i>
                                       ) : (
                                         <i className="bi bi-play-circle" title="Activar"></i>
                                       )}
@@ -2692,7 +2702,6 @@ export function CategoriaDetailPage() {
                           <p><i className="bi bi-hourglass-split"></i> {cita.duracion} minutos</p>
                         </div>
                         <div className="cita-card-actions">
-                          {/* Botón Editar - solo para citas pendientes o confirmadas */}
                           {(cita.estado === 'pendiente' || cita.estado === 'confirmada') && (
                             <Button
                               onClick={() => handleEditCita(cita)}

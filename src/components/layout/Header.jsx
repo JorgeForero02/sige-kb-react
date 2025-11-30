@@ -3,31 +3,37 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import './Header.css';
 import logo from '../../assets/logoIcono.png';
-import notificaciones from '../../assets/notificaciones.png';
-import usuario from '../../assets/usuario.png';
 
 export function Header() {
     const navigate = useNavigate();
-    const { user, logout } = useAuth();
+    const { user, rol, loading: authLoading, logout } = useAuth();
 
-    const rol = user?.rol || user?.rolInfo?.nombre || 'Gerente';
-    const rolString = typeof rol === 'string' ? rol : String(rol);
+    const getRolInfo = () => {
+        if (authLoading) return 'Cargando...';
+        if (rol) return rol;
+        if (user?.rol) return user.rol;
+        if (user?.rolInfo?.nombre) return user.rolInfo.nombre;
+        if (!user && rol) return rol;
+        return 'Usuario';
+    };
 
-    const email = (user?.email || user?.correo || user?.username || '')?.toString();
+    const rolString = getRolInfo();
 
-    const nameSource = (email).toString();
+    const getEmail = () => {
+        if (authLoading) return 'Cargando...';
+        if (!user) return '';
+        return (user?.email || user?.correo || user?.username || 'Usuario');
+    };
+
+    const email = getEmail();
+
+    const nameSource = email.toString();
     const initials = nameSource
         .split(/\s+/)
         .filter(Boolean)
         .slice(0, 3)
-        .map(s => s[0].toUpperCase())
+        .map(s => s[0]?.toUpperCase() || 'U')
         .join('') || 'U';
-
-    const handleLogoClick = () => {
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
-        navigate('/login');
-    };
 
     const handleLogout = () => {
         logout();
@@ -37,29 +43,28 @@ export function Header() {
     return (
         <header className="header">
             <div className="header-left">
-                <div className="header-brand" onClick={handleLogoClick} style={{cursor: 'pointer'}}>
-                    <img src={logo} alt="KarenBeauty Logo" className="header-logo" />
+                <div className="header-brand">
+                    {/* Logo sin funcionalidad de clic */}
+                    <img
+                        src={logo}
+                        alt="KarenBeauty Logo"
+                        className="header-logo"
+                    />
                 </div>
             </div>
 
             <div className="header-right">
                 <div className="header-actions">
-                    <button className="icon-btn">
-                        <img src={notificaciones} alt="Notificaciones" className="icon-img" />
-                    </button>
-
                     <div className="user-info">
                         <div className="user-details">
                             <div className="user-role">{rolString}</div>
                             <div className="user-email">{email}</div>
                         </div>
-                        
                         <div className="user-avatar">
                             <div className="avatar-initials">
                                 {initials}
                             </div>
                         </div>
-                        
                     </div>
                 </div>
             </div>

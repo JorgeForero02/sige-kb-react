@@ -5,6 +5,7 @@ import { CategoriasProvider } from './context/CategoriasContext';
 import { ProtectedRoute } from './components/Auth/ProtectedRoute';
 import { Login } from './components/Auth/Login';
 import { HomePage } from './pages/HomePage';
+import {HomePageEmpleado} from './pages/HomePageEmpleado'
 import { EmpleadosPage } from './pages/EmpleadosPage';
 import { CategoriasPage } from './pages/CategoriasPage';
 import { CategoriaDetailPage } from './pages/CategoriaDetailPage';
@@ -30,6 +31,7 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+            <Route path="/home-empleado" element={<ProtectedRoute><HomePageEmpleado /></ProtectedRoute>}/>
             <Route path="/empleados" element={<ProtectedRoute><EmpleadosPage /></ProtectedRoute>} />
             <Route path="/servicios-empleado" element={<ProtectedRoute><ServiciosEmpleadoPage /></ProtectedRoute>} />
             <Route path="/agenda-empleado" element={<ProtectedRoute><AgendaEmpleadoPage /></ProtectedRoute>} />

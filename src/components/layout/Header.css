@@ -6,8 +6,20 @@
   background: #ffffff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border-bottom: 1px solid #dee2e6;
-  height: auto;
-  min-height: 100px;  
+  height: 100px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  flex-shrink: 0;
+}
+
+/* CONTENEDOR PRINCIPAL - IMPORTANTE */
+.main-content {
+  margin-top: 100px !important;
+  padding: 20px;
+  min-height: calc(100vh - 100px);
 }
 
 .header-left {
@@ -20,50 +32,23 @@
 .header-brand {
   display: flex;
   align-items: center;
-  gap: 1rem; /* Más espacio entre logo y texto */
+  gap: 1rem;
   min-width: 0;
   flex: 1;
 }
 
 .header-logo {
-  width: 90px;   /* Reducido de 200px a 90px - tamaño balanceado */
-  height: 90px;  /* Reducido de 200px a 90px - tamaño balanceado */
+  width: 150px !important;
   object-fit: contain;
   flex-shrink: 0;
-}
-
-.brand-text {
-  min-width: 0;
-  flex: 1;
-}
-
-.brand-text h1 {
-  margin: 0;
-  color: #f74780;
-  font-size: 2.2rem; /* Texto más grande para balancear */
-  font-weight: 700;
-  font-family: 'Inter', sans-serif;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.brand-subtitle {
-  font-size: 0.9rem; /* Subtítulo más grande */
-  color: #6c757d;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 1.5px; /* Más espaciado */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin-left: -33px;
 }
 
 .header-right {
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  margin-right: -20px;
 }
 
 .header-actions {
@@ -71,18 +56,6 @@
   align-items: center;
   gap: 0.75rem;
   flex-wrap: nowrap;
-}
-
-.icon-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.4rem;
-  border-radius: 6px;
-  transition: all 0.3s ease;
-  font-size: 1.2rem;
-  color: #f74780;
-  flex-shrink: 0;
 }
 
 .user-info {
@@ -102,7 +75,7 @@
 
 .user-role {
   font-weight: 600;
-  color: #050505;
+  color: #050505!important;
   font-size: 20px;
   margin-bottom: 0.1rem;
   white-space: nowrap;
@@ -122,188 +95,48 @@
   width: 35px;
   height: 35px;
   border-radius: 50%;
-  background: #f8f9fa;
+  background: #fac8d4;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #000000;
   font-size: 1.1rem;
-  border: 1px solid #dee2e6;
+  border: 1px solid #F74780;
   cursor: pointer;
   transition: all 0.3s ease;
   flex-shrink: 0;
 }
 
-.logout-header-btn {
-  width: 20px;
-  height: 20px;
-  border: none;
-  border-radius: 6px;
-  background: rgba(220, 38, 38, 0.1);
-  color: #dc2626;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  font-size: 1rem;
-  flex-shrink: 0;
-}
-
-/* Responsive para tablets */
+/* RESPONSIVE */
 @media (max-width: 992px) {
   .header {
-    padding: 0.6rem 1rem;
+    height: 90px;
   }
   
-  .header-logo {
-    width: 100px;
-    height: 100px;
-  }
-  
-  .brand-text h1 {
-    font-size: 1.3rem;
-  }
-  
-  .user-email {
-    max-width: 120px;
+  .main-content {
+    margin-top: 90px !important;
+    min-height: calc(100vh - 90px);
   }
 }
 
-/* Responsive para móviles - MOSTRAR DETALLES COMPACTOS */
 @media (max-width: 768px) {
   .header {
-    padding: 0.5rem 0.75rem;
-    min-height: 60px;
-  }
-  
-  .header-brand {
-    gap: 0.5rem;
-  }
-  
-  .header-logo {
-    width: 45px;
-    height: 45px;
-  }
-  
-  .brand-text h1 {
-    font-size: 1.1rem;
-  }
-  
-  .brand-subtitle {
-    font-size: 0.65rem;
-  }
-  
-  /* MOSTRAR detalles del usuario en móvil de forma compacta */
-  .user-details {
-    display: block; /* Mostrar en móvil */
-  }
-  
-  .user-role {
-    font-size: 0.7rem;
-    font-weight: 600;
-  }
-  
-  .user-email {
-    font-size: 0.6rem;
-    max-width: 80px; 
-  }
-  
-  .user-avatar {
-    width: 30px;
-    height: 30px;
-    font-size: 0.9rem;
-    background-color: #f74780;
-  }
-  
-  .logout-header-btn {
-    width: 80px;
     height: 80px;
-    font-size: 0.9rem;
   }
   
-  .icon-btn {
-    font-size: 20px;
-    padding: 0.3rem;
-  }
-  
-  .header-actions {
-    gap: 0.4rem;
+  .main-content {
+    margin-top: 80px !important;
+    min-height: calc(100vh - 80px);
   }
 }
 
-/* Para pantallas muy pequeñas (móviles pequeños) */
 @media (max-width: 480px) {
   .header {
-    padding: 0.4rem 0.5rem;
-    min-height: 55px;
+    height: 70px;
   }
   
-  .header-logo {
-    width: 40px;
-    height: 40px;
-  }
-  
-  .brand-text h1 {
-    font-size: 1rem;
-  }
-  
-  .brand-subtitle {
-    display: none;
-  }
-  
-  /* Ajustar detalles del usuario para móviles pequeños */
-  .user-details {
-    display: block;
-  }
-  
-  .user-role {
-    font-size: 0.65rem;
-  }
-  
-  .user-email {
-    font-size: 0.55rem;
-    max-width: 60px; /* Más compacto */
-  }
-  
-  .user-avatar {
-    width: 28px;
-    height: 28px;
-    font-size: 0.8rem;
-  }
-  
-  .logout-header-btn {
-    width: 28px;
-    height: 28px;
-    font-size: 0.8rem;
-  }
-  
-  .icon-btn {
-    font-size: 0.9rem;
-    padding: 0.25rem;
-  }
-  
-  .header-actions {
-    gap: 0.3rem;
-  }
-}
-
-/* Para pantallas extremadamente pequeñas */
-@media (max-width: 360px) {
-  .brand-text h1 {
-    font-size: 0.9rem;
-  }
-  
-  .user-email {
-    max-width: 50px;
-    font-size: 0.5rem;
-  }
-  
-  .user-role {
-    font-size: 0.6rem;
-  }
-  
-  .header-actions {
-    gap: 0.2rem;
+  .main-content {
+    margin-top: 70px !important;
+    min-height: calc(100vh - 70px);
   }
 }

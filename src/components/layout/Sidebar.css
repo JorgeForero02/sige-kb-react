@@ -451,3 +451,66 @@
   }
 }
 
+.sidebar-dropdown-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem 0.7rem 2.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+}
+
+.sidebar-dropdown-loading .spinner {
+  animation: spin 1s linear infinite;
+  font-size: 0.8rem;
+}
+
+/* Estados vacíos */
+.sidebar-subitem.empty {
+  color: rgba(255, 255, 255, 0.5);
+  cursor: not-allowed;
+  font-style: italic;
+}
+
+.sidebar-subitem.empty:hover {
+  background: none;
+  transform: none;
+}
+
+/* Botón deshabilitado */
+.sidebar-dropdown-toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sidebar-dropdown-toggle:disabled:hover {
+  background: none;
+  transform: none;
+}
+
+/* Spinner en botones */
+.sidebar-dropdown-toggle .spinner {
+  animation: spin 1s linear infinite;
+  margin-left: auto;
+  font-size: 0.8rem;
+}
+
+/* Mejor transición para dropdown */
+.sidebar-dropdown-content {
+  transition: max-height 0.3s ease, opacity 0.2s ease;
+  opacity: 0;
+}
+
+.sidebar-dropdown-content.show {
+  opacity: 1;
+}
+
+/* Estado activo mejorado */
+.sidebar-dropdown-toggle.active {
+  border-left-color: #FFC1D5;
+}
+
+.sidebar-dropdown-toggle.active.open {
+  background: rgba(255, 255, 255, 0.1);
+}
+

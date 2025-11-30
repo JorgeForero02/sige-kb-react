@@ -885,7 +885,7 @@ export function EmpleadosPage() {
                               {changingState === empleado.id ? (
                                 <i className="bi bi-arrow-repeat"></i>
                               ) : (
-                                <i className={empleado.estado === 1 ? 'bi bi-pause' : 'bi bi-play'}></i>
+                                <i className={empleado.estado === 1 ? 'bi bi-trash' : 'bi bi-play'}></i>
                               )}
                             </Button>
                             <Button
