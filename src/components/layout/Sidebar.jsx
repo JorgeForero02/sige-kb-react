@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useCategorias } from '../../context/CategoriasContext';
@@ -9,7 +9,14 @@ export function Sidebar({ isOpen, setIsOpen }) {
   const navigate = useNavigate();
   const { user, rol, loading: authLoading, logout } = useAuth();
 
-  const { categorias, categoriasOpen, setCategoriasOpen, fetchCategorias, loading: categoriasLoading } = useCategorias();
+  const {
+    categorias,
+    categoriasOpen,
+    setCategoriasOpen,
+    fetchCategorias,
+    loading: categoriasLoading,
+    hasLoaded
+  } = useCategorias();
 
   const categoriasActivas = categorias.filter(categoria => {
     const estado = categoria.estado?.toString().toUpperCase();
@@ -24,10 +31,13 @@ export function Sidebar({ isOpen, setIsOpen }) {
   }, [location.pathname, categoriasOpen, setCategoriasOpen]);
 
   useEffect(() => {
-    if (categoriasOpen && categorias.length === 0) {
+    const shouldLoad = categoriasOpen && !hasLoaded && !categoriasLoading;
+
+    if (shouldLoad) {
+      console.log('Cargando categorías desde Sidebar...');
       fetchCategorias();
     }
-  }, [categoriasOpen, categorias.length, fetchCategorias]);
+  }, [categoriasOpen, hasLoaded, categoriasLoading, fetchCategorias]);
 
   const handleLogout = () => {
     logout();
@@ -117,12 +127,8 @@ export function Sidebar({ isOpen, setIsOpen }) {
     }
   };
 
-  const handleCategoriasClick = async () => {
+  const handleCategoriasClick = () => {
     const isMobile = window.innerWidth < 768;
-
-    if (categorias.length === 0) {
-      await fetchCategorias();
-    }
 
     if (!location.pathname.includes('/categorias')) {
       navigate('/categorias');
@@ -178,7 +184,7 @@ export function Sidebar({ isOpen, setIsOpen }) {
           onClick: handleCategoriasClick,
           mainPath: '/categorias',
           subItems: categoriasActivas,
-          isLoading: categoriasLoading
+          isLoading: categoriasLoading && !hasLoaded
         },
         { path: '/empleados', icon: 'bi-person-badge-fill', label: 'Empleados' },
         { path: '/caja', icon: 'bi-cash-coin', label: 'Caja' },
@@ -205,7 +211,7 @@ export function Sidebar({ isOpen, setIsOpen }) {
         isOpen: categoriasOpen,
         onClick: handleCategoriasClick,
         subItems: categoriasActivas,
-        isLoading: categoriasLoading
+        isLoading: categoriasLoading && !hasLoaded
       }
     ];
   };

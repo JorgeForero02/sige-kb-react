@@ -1,5 +1,4 @@
-// context/CategoriasContext.js
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 
 const CategoriasContext = createContext();
@@ -7,35 +6,45 @@ const CategoriasContext = createContext();
 export function CategoriasProvider({ children }) {
   const [categorias, setCategorias] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [categoriasOpen, setCategoriasOpen] = useState(false); 
+  const [categoriasOpen, setCategoriasOpen] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
-  const fetchCategorias = async () => {
+  const fetchCategorias = useCallback(async (force = false) => {
+    if (loading || (hasLoaded && !force)) {
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await api.getCategorias();
       setCategorias(res.data || []);
+      setHasLoaded(true);
     } catch (error) {
       console.error('Error fetching categorias:', error);
+      setHasLoaded(false);
     }
     setLoading(false);
-  };
+  }, [loading, hasLoaded]);
 
-  const refreshCategorias = () => {
-    fetchCategorias();
-  };
+  const refreshCategorias = useCallback(() => {
+    fetchCategorias(true);
+  }, [fetchCategorias]);
 
   useEffect(() => {
-    fetchCategorias();
-  }, []);
+    if (!hasLoaded && !loading) {
+      fetchCategorias();
+    }
+  }, [hasLoaded, loading, fetchCategorias]);
 
   return (
     <CategoriasContext.Provider value={{
       categorias,
       loading,
-      categoriasOpen,      
-      setCategoriasOpen,     
+      categoriasOpen,
+      setCategoriasOpen,
       refreshCategorias,
-      fetchCategorias
+      fetchCategorias,
+      hasLoaded
     }}>
       {children}
     </CategoriasContext.Provider>
