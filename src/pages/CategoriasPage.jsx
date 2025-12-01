@@ -712,22 +712,11 @@ export function CategoriasPage() {
                                   onClick={() => handleToggleEstado(categoria)}
                                   title="Desactivar categoría"
                                 >
-                                  <i className="bi bi-pause-circle"></i>
+                                  <i className="bi bi-trash"></i>
                                   <span>Desactivar</span>
                                 </Button>
                               )}
                             </>
-                          )}
-                          {can('DELETE_CATEGORIA') && (
-                            <Button
-                              variant="danger"
-                              className="btn-sm"
-                              onClick={() => handleDelete(categoria)}
-                              title="Eliminar categoría"
-                            >
-                              <i className="bi bi-trash"></i>
-                              <span>Eliminar</span>
-                            </Button>
                           )}
                         </div>
                       </td>

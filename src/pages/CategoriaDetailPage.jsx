@@ -999,7 +999,7 @@ export function CategoriaDetailPage() {
         loadCitas();
       }
     }
-  }, [fecha, categoria, activeTab, filtroMes, filtroEstado]); 
+  }, [fecha, categoria, activeTab, filtroMes, filtroEstado]);
   const loadEmpleados = async () => {
     try {
       const empleadosRes = await api.getUsuarios();
@@ -1290,6 +1290,77 @@ export function CategoriaDetailPage() {
     setShowConfirmacionPersonalizada(true);
   };
 
+  // Función para convertir hora de 24h a 12h para mostrar en el input
+  const convertirHora24a12 = (hora24) => {
+    if (!hora24) return '';
+
+    // Si ya está en formato 12h, devolver tal cual
+    if (hora24.includes('a. m.') || hora24.includes('p. m.')) {
+      return hora24;
+    }
+
+    // Limpiar la hora (por si viene con segundos)
+    const [horas, minutos] = hora24.split(':');
+    const horasNum = parseInt(horas);
+    const minutosNum = parseInt(minutos || '0');
+
+    if (isNaN(horasNum)) return '';
+
+    const periodo = horasNum >= 12 ? 'p. m.' : 'a. m.';
+    const horas12 = horasNum % 12 || 12;
+
+    return `${horas12.toString().padStart(2, '0')}:${minutosNum.toString().padStart(2, '0')} ${periodo}`;
+  };
+
+  const convertirHora12a24 = (hora12) => {
+    if (!hora12) return '';
+
+    if (hora12.match(/^\d{2}:\d{2}$/)) {
+      return hora12;
+    }
+
+    const match = hora12.match(/(\d{1,2}):(\d{2})\s*(a\. m\.|p\. m\.|am|pm)/i);
+    if (!match) return '';
+
+    let horas = parseInt(match[1]);
+    const minutos = match[2];
+    const periodo = match[3].toLowerCase();
+
+    if (periodo.includes('p. m.') || periodo.includes('pm')) {
+      if (horas !== 12) horas += 12;
+    } else if (periodo.includes('a. m.') || periodo.includes('am')) {
+      if (horas === 12) horas = 0;
+    }
+
+    return `${horas.toString().padStart(2, '0')}:${minutos}`;
+  };
+
+  const formatearHoraParaInput = (hora) => {
+    if (!hora) return '';
+
+    console.log('Hora original recibida:', hora);
+
+    if (hora.match(/^\d{2}:\d{2}$/)) {
+      console.log('Hora ya en formato correcto:', hora);
+      return hora;
+    }
+
+    if (hora.match(/^\d{2}:\d{2}:\d{2}$/)) {
+      const horaFormateada = hora.substring(0, 5);
+      console.log('Hora con segundos formateada:', horaFormateada);
+      return horaFormateada;
+    }
+
+    if (hora.includes('a. m.') || hora.includes('p. m.')) {
+      const horaConvertida = convertirHora12a24(hora);
+      console.log('Hora 12h convertida a 24h:', horaConvertida);
+      return horaConvertida;
+    }
+
+    console.log('Hora no pudo ser formateada, devolviendo original:', hora);
+    return hora;
+  };
+
   const handleToggleEstadoCliente = async (cliente) => {
     const estadoActual = getEstadoCliente(cliente);
     const nuevoEstado = estadoActual === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO';
@@ -1377,38 +1448,155 @@ export function CategoriaDetailPage() {
   };
 
   const handleEditCita = (cita) => {
+    console.log('=== EDITANDO CITA ===');
+    console.log('Cita a editar:', cita);
+
+    if (cita.estado === 'completada' || cita.estado === 'cancelada') {
+      showError('No se pueden editar citas completadas o canceladas');
+      return;
+    }
+
+    if (!cita.id || !cita.fecha || !cita.hora_inicio || !cita.encargado || !cita.cliente || !cita.servicio) {
+      showError('La cita no tiene todos los datos necesarios para editar');
+      return;
+    }
+
     setCitaEditando(cita);
+
+    // CORRECCIÓN: Mantener la hora exacta como viene de la API
+    // El input type="time" solo acepta HH:MM, así que extraemos solo horas y minutos
+    const horaOriginal = cita.hora_inicio;
+    let horaParaInput = horaOriginal;
+
+    // Si la hora tiene segundos (formato HH:MM:SS), quitarlos para el input
+    if (horaOriginal && horaOriginal.match(/^\d{2}:\d{2}:\d{2}$/)) {
+      horaParaInput = horaOriginal.substring(0, 5); // Tomar solo HH:MM
+    }
+
+    // Si la hora está en formato 12h, convertirla a 24h para el input
+    if (horaOriginal && (horaOriginal.includes('a. m.') || horaOriginal.includes('p. m.'))) {
+      horaParaInput = convertirHora12a24(horaOriginal);
+    }
+
+    console.log('Hora original:', horaOriginal);
+    console.log('Hora para input:', horaParaInput);
+
     setEditCitaForm({
       fecha: cita.fecha || fecha,
-      hora_inicio: cita.hora_inicio || '',
-      duracion: cita.duracion?.toString() || '',
+      hora_inicio: horaParaInput,
+      duracion: cita.duracion?.toString() || '30',
       encargado: cita.encargado?.toString() || '',
       cliente: cita.cliente?.toString() || '',
       servicio: cita.servicio?.toString() || ''
     });
+
+    console.log('Formulario de edición inicializado:', {
+      fecha: cita.fecha || fecha,
+      hora_inicio: horaParaInput,
+      duracion: cita.duracion?.toString() || '30',
+      encargado: cita.encargado?.toString() || '',
+      cliente: cita.cliente?.toString() || '',
+      servicio: cita.servicio?.toString() || ''
+    });
+
     setShowEditCitaModal(true);
   };
 
   const handleUpdateCita = async (e) => {
     e.preventDefault();
 
-    if (!editCitaForm.hora_inicio || !editCitaForm.cliente || !editCitaForm.encargado || !editCitaForm.servicio) {
-      warning('Completa todos los campos requeridos');
+    console.log('=== INICIANDO ACTUALIZACIÓN DE CITA ===');
+    console.log('Datos del formulario:', editCitaForm);
+    console.log('Cita editando:', citaEditando);
+
+    const camposRequeridos = [
+      { campo: 'fecha', valor: editCitaForm.fecha, nombre: 'Fecha' },
+      { campo: 'hora_inicio', valor: editCitaForm.hora_inicio, nombre: 'Hora' },
+      { campo: 'servicio', valor: editCitaForm.servicio, nombre: 'Servicio' },
+      { campo: 'cliente', valor: editCitaForm.cliente, nombre: 'Cliente' },
+      { campo: 'encargado', valor: editCitaForm.encargado, nombre: 'Empleado' }
+    ];
+
+    const camposFaltantes = camposRequeridos.filter(item => !item.valor);
+
+    if (camposFaltantes.length > 0) {
+      const campos = camposFaltantes.map(item => item.nombre).join(', ');
+      warning(`Completa los siguientes campos requeridos: ${campos}`);
+      return;
+    }
+
+    const duracion = parseInt(editCitaForm.duracion);
+    if (isNaN(duracion) || duracion <= 0) {
+      warning('La duración debe ser un número positivo');
+      return;
+    }
+
+    const encargadoId = parseInt(editCitaForm.encargado);
+    const clienteId = parseInt(editCitaForm.cliente);
+    const servicioId = parseInt(editCitaForm.servicio);
+
+    if (isNaN(encargadoId) || isNaN(clienteId) || isNaN(servicioId)) {
+      warning('Error en los datos: IDs inválidos');
       return;
     }
 
     setSaving(true);
     try {
+      // CORRECCIÓN: Asegurar que la hora esté en formato HH:MM (sin segundos)
+      let horaFinal = editCitaForm.hora_inicio && editCitaForm.hora_inicio.trim() !== ''
+        ? editCitaForm.hora_inicio.trim()
+        : citaEditando.hora_inicio;
+
+      // Si la hora tiene segundos, quitarlos (el backend espera HH:MM)
+      if (horaFinal && horaFinal.match(/^\d{2}:\d{2}:\d{2}$/)) {
+        horaFinal = horaFinal.substring(0, 5);
+      }
+
+      // Validar formato de hora (HH:MM)
+      if (!horaFinal || !horaFinal.match(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+        showError('La hora debe estar en formato HH:MM (24 horas, ej: 14:30)');
+        setSaving(false);
+        return;
+      }
+
       const citaData = {
-        fecha: editCitaForm.fecha,
-        hora_inicio: editCitaForm.hora_inicio,
-        duracion: parseInt(editCitaForm.duracion),
-        encargado: parseInt(editCitaForm.encargado),
-        cliente: parseInt(editCitaForm.cliente),
-        servicio: parseInt(editCitaForm.servicio)
+        fecha: editCitaForm.fecha.trim(),
+        hora_inicio: horaFinal, // Solo HH:MM, sin segundos
+        duracion: duracion,
+        encargado: encargadoId,
+        cliente: clienteId,
+        servicio: servicioId,
+        estado: citaEditando?.estado || 'pendiente'
       };
 
-      await api.actualizarCita(citaEditando.id, citaData);
+      console.log('Datos a enviar a la API:', citaData);
+
+      const empleadoExiste = empleados.find(e => e.id === encargadoId);
+      const clienteExiste = clientes.find(c => c.id === clienteId);
+      const servicioExiste = servicios.find(s => s.id === servicioId);
+
+      if (!empleadoExiste) {
+        showError('El empleado seleccionado no existe');
+        setSaving(false);
+        return;
+      }
+
+      if (!clienteExiste) {
+        showError('El cliente seleccionado no existe');
+        setSaving(false);
+        return;
+      }
+
+      if (!servicioExiste) {
+        showError('El servicio seleccionado no existe');
+        setSaving(false);
+        return;
+      }
+
+      console.log('Enviando solicitud a la API...');
+      const response = await api.actualizarCita(citaEditando.id, citaData);
+      console.log('Respuesta de la API:', response);
+
       success('Cita actualizada exitosamente!');
 
       setShowEditCitaModal(false);
@@ -1416,9 +1604,41 @@ export function CategoriaDetailPage() {
       await loadCitas();
 
     } catch (err) {
-      // Mostrar el error específico de validación
-      showError(err.message || 'Error de validación al actualizar cita');
-      console.error('Error detallado:', err);
+      console.error('=== ERROR COMPLETO ===');
+      console.error('Error objeto:', err);
+      console.error('Error status:', err.status);
+      console.error('Error data:', err.data);
+      console.error('Error message:', err.message);
+
+      let errorMessage = 'Error al actualizar la cita';
+
+      if (err.data) {
+        const errorData = err.data;
+        if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+          const erroresEspecificos = errorData.errors.map(error => {
+            if (error.msg) return error.msg;
+            else if (typeof error === 'string') return error;
+            else if (error.message) return error.message;
+            return JSON.stringify(error);
+          }).filter(msg => msg);
+
+          if (erroresEspecificos.length > 0) {
+            errorMessage = `Errores de validación:\n• ${erroresEspecificos.join('\n• ')}`;
+          }
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } else if (err.message?.includes('validacion') || err.message?.includes('validación')) {
+        errorMessage = 'Error de validación: Verifica que todos los campos estén correctamente llenados';
+      } else if (err.message?.includes('horario') || err.message?.includes('disponible') || err.message?.includes('conflicto')) {
+        errorMessage = 'El horario no está disponible. Por favor, elige otro horario o empleado.';
+      } else if (err.status === 409) {
+        errorMessage = 'Ya existe una cita en ese horario para el empleado seleccionado.';
+      }
+
+      showError(errorMessage);
     }
     setSaving(false);
   };
@@ -1532,11 +1752,6 @@ export function CategoriaDetailPage() {
 
     if (porcentaje < 0) {
       warning('El porcentaje no puede ser negativo');
-      return;
-    }
-
-    if (duracion % 15 !== 0) {
-      warning('La duración debe ser múltiplo de 15 minutos (15, 30, 45, 60, etc.)');
       return;
     }
 
@@ -2604,8 +2819,9 @@ export function CategoriaDetailPage() {
 
                 <Modal show={showEditCitaModal} onClose={() => setShowEditCitaModal(false)}>
                   <h4 style={{ marginBottom: '1.5rem', fontWeight: '700', color: '#333' }}>
-                    Editar Cita
+                    Editar Cita - {citaEditando?.clienteInfo?.nombre} {citaEditando?.clienteInfo?.apellido}
                   </h4>
+
                   <form onSubmit={handleUpdateCita} className="form-layout">
                     <Input
                       label="Fecha *"
@@ -2613,6 +2829,7 @@ export function CategoriaDetailPage() {
                       value={editCitaForm.fecha}
                       onChange={(e) => setEditCitaForm({ ...editCitaForm, fecha: e.target.value })}
                       required
+                      min={new Date().toISOString().split('T')[0]}
                     />
                     <Input
                       label="Hora *"
@@ -2624,7 +2841,23 @@ export function CategoriaDetailPage() {
                     <Select
                       label="Servicio *"
                       value={editCitaForm.servicio}
-                      onChange={(e) => setEditCitaForm({ ...editCitaForm, servicio: e.target.value })}
+                      onChange={(e) => {
+                        const servicioId = e.target.value;
+                        console.log('Servicio seleccionado:', servicioId);
+                        setEditCitaForm({ ...editCitaForm, servicio: servicioId });
+
+                        // Actualizar duración automáticamente si se cambia el servicio
+                        if (servicioId) {
+                          const servicioSeleccionado = servicios.find(s => s.id === parseInt(servicioId));
+                          console.log('Servicio encontrado:', servicioSeleccionado);
+                          if (servicioSeleccionado?.duracion) {
+                            setEditCitaForm(prev => ({
+                              ...prev,
+                              duracion: servicioSeleccionado.duracion.toString()
+                            }));
+                          }
+                        }
+                      }}
                       options={servicios.filter(servicio => getEstadoServicio(servicio) === 'ACTIVO')}
                       required
                     />
@@ -2632,26 +2865,38 @@ export function CategoriaDetailPage() {
                       label="Duración (minutos) *"
                       type="number"
                       value={editCitaForm.duracion}
-                      onChange={(e) => setEditCitaForm({ ...editCitaForm, duracion: e.target.value })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        console.log('Duración cambiada:', value);
+                        setEditCitaForm({ ...editCitaForm, duracion: value });
+                      }}
                       min="15"
                       step="15"
                       required
+                      onWheel={(e) => e.target.blur()}
                     />
                     <Select
                       label="Cliente *"
                       value={editCitaForm.cliente}
-                      onChange={(e) => setEditCitaForm({ ...editCitaForm, cliente: e.target.value })}
+                      onChange={(e) => {
+                        console.log('Cliente seleccionado:', e.target.value);
+                        setEditCitaForm({ ...editCitaForm, cliente: e.target.value });
+                      }}
                       options={clientes}
                       required
                     />
                     <Select
                       label="Empleado *"
                       value={editCitaForm.encargado}
-                      onChange={(e) => setEditCitaForm({ ...editCitaForm, encargado: e.target.value })}
+                      onChange={(e) => {
+                        console.log('Empleado seleccionado:', e.target.value);
+                        setEditCitaForm({ ...editCitaForm, encargado: e.target.value });
+                      }}
                       options={empleados}
                       required
                       disabled={isEmpleado}
                     />
+
                     <div className="form-actions">
                       <Button variant="primary" disabled={saving}>
                         {saving ? 'Actualizando...' : 'Actualizar Cita'}
